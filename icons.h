@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QActionGroup>
 #include <QScopedPointer>
+#include <QLabel>
 
 #include <memory>
 #include <vector>
@@ -40,6 +41,8 @@ private slots:
 	void setMediumIcons();
 	void setLargeIcons();
 
+	void updateIconCount();
+
 private:
 	void setupConnections();
 	void loadCollections();
@@ -49,6 +52,7 @@ private:
 
 	QScopedPointer<Ui::MainWindow> m_ui;
 	QActionGroup *m_iconSizeGroup;
+	QLabel *m_iconCountLabel;
 
 	std::vector<std::unique_ptr<SVGIconList>> m_iconLists;
 	std::vector<std::unique_ptr<BitmapIconList>> m_bitmapLists;

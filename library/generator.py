@@ -607,8 +607,13 @@ def main_breeze():
 
 
 def scan_for_png_files(icon_folder):
-    """Scan for PNG files, excluding symlinks and alias files."""
+    """Scan for PNG files, excluding symlinks and alias files.
+
+    Returns: (real_files, aliases) where aliases is a list of (alias_name, target_name) tuples
+    """
     png_files = []
+    aliases = []
+
     for root, dirs, files in os.walk(icon_folder):
         for file in files:
             if file.endswith(".png"):
@@ -616,13 +621,33 @@ def scan_for_png_files(icon_folder):
                 # Skip symlinks
                 if os.path.islink(full_path):
                     continue
-                # Skip small files that are likely symlinks stored as text
+                # Check for small files that are symlinks stored as text
                 # (ZIP archives store symlinks as text files with target path)
                 file_size = os.path.getsize(full_path)
                 if file_size < 100:
+                    # Read the target from the alias file
+                    try:
+                        with open(full_path, 'r') as f:
+                            target = f.read().strip()
+                        # Get relative paths for alias and target
+                        rel_dir = os.path.dirname(os.path.relpath(full_path, icon_folder))
+                        alias_name = os.path.splitext(file)[0]
+                        if rel_dir:
+                            alias_name = f"{rel_dir}/{alias_name}"
+                        # Resolve the target relative to the alias location
+                        alias_dir = os.path.dirname(full_path)
+                        target_path = os.path.normpath(os.path.join(alias_dir, target))
+                        target_rel = os.path.relpath(target_path, icon_folder)
+                        target_name = os.path.splitext(target_rel)[0]
+                        # Normalize path separators
+                        alias_name = alias_name.replace('\\', '/')
+                        target_name = target_name.replace('\\', '/')
+                        aliases.append((alias_name, target_name))
+                    except Exception as e:
+                        print(f"    Warning: Could not read alias {full_path}: {e}")
                     continue
                 png_files.append(full_path)
-    return png_files
+    return png_files, aliases
 
 
 def find_rcc_tool():
@@ -678,16 +703,20 @@ def process_oxygen_collection(bitmap_dir, collection_name, display_name, source_
 
         # Collect all PNG files with their relative paths
         png_files = []
+        all_aliases = []
 
         for category in categories:
             cat_dir = os.path.join(size_dir, category)
             if os.path.exists(cat_dir):
-                files = scan_for_png_files(cat_dir)
+                files, aliases = scan_for_png_files(cat_dir)
                 for f in files:
                     name = os.path.splitext(os.path.basename(f))[0]
                     # Use category/name as unique identifier
                     unique_name = f"{category}/{name}"
                     png_files.append((f, unique_name))
+                # Prefix aliases with category
+                for alias, target in aliases:
+                    all_aliases.append((f"{category}/{alias}", f"{category}/{target}"))
 
         if not png_files:
             print(f"    No icons found for size {size}")
@@ -707,7 +736,7 @@ def process_oxygen_collection(bitmap_dir, collection_name, display_name, source_
             abs_path = os.path.abspath(png_path)
             all_qrc_entries.append((size, name, abs_path))
 
-        # Generate C file with icon names
+        # Generate C file with icon names and aliases
         c_file = os.path.join(bitmap_dir, f"png_{collection_name}_size_{size}.c")
         with open(c_file, 'w') as f:
             f.write('#include <stddef.h>\n\n')
@@ -715,8 +744,18 @@ def process_oxygen_collection(bitmap_dir, collection_name, display_name, source_
             for name in png_names:
                 f.write(f'    "{name}",\n')
             f.write('    NULL\n')
-            f.write('};\n')
+            f.write('};\n\n')
+
+            # Write alias data
+            f.write(f'const char* png_{collection_name}_size_{size}_aliases[][2] = {{\n')
+            for alias, target in all_aliases:
+                f.write(f'    {{"{alias}", "{target}"}},\n')
+            f.write('    {NULL, NULL}\n')
+            f.write('};\n\n')
+            f.write(f'const int png_{collection_name}_size_{size}_alias_count = {len(all_aliases)};\n')
         meta['output'].append(c_file)
+
+        print(f"    Found {len(all_aliases)} aliases")
 
         # Generate header file
         save_svg_iconlist(oxygen_library_template,
@@ -835,6 +874,9 @@ if __name__ == "__main__":
         for m in output:
             for f in m['output']:
                 file.write(f"    library/{f}\\\n")
+        # Add bitmap C files
+        for f in bitmap_output['output']:
+            file.write(f"    library/{f}\\\n")
         file.write("\n")
     with open("library.qrc", 'w') as file:
         file.write('<RCC>\n')

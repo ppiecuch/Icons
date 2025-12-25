@@ -54,15 +54,12 @@ void IconDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option,
 		textRect.setTop(iconY + m_iconSize + 4);
 		textRect.setHeight(m_nameHeight);
 
-		// Elide text if too long
-		QFontMetrics fm(option.font);
-		QString elidedName = fm.elidedText(name, Qt::ElideMiddle, textRect.width() - 4);
-
 		painter->setPen(option.state & QStyle::State_Selected
 						? option.palette.highlightedText().color()
 						: option.palette.text().color());
 
-		painter->drawText(textRect, Qt::AlignHCenter | Qt::AlignTop, elidedName);
+		// Draw text with word wrap, up to 2 lines
+		painter->drawText(textRect, Qt::AlignHCenter | Qt::AlignTop | Qt::TextWordWrap, name);
 	}
 
 	painter->restore();
@@ -336,6 +333,13 @@ IconPreview::IconPreview(QWidget *parent)
 	m_nameLabel->setAlignment(Qt::AlignCenter);
 	m_nameLabel->setWordWrap(true);
 
+	// Aliases label
+	m_aliasesLabel = new QLabel(this);
+	m_aliasesLabel->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+	m_aliasesLabel->setWordWrap(true);
+	m_aliasesLabel->setStyleSheet("QLabel { color: gray; font-size: 10px; }");
+	m_aliasesLabel->setVisible(false);
+
 	// Buttons - vertical layout
 	auto *buttonLayout = new QVBoxLayout();
 	buttonLayout->setSpacing(4);
@@ -361,6 +365,7 @@ IconPreview::IconPreview(QWidget *parent)
 
 	layout->addWidget(m_iconLabel, 0, Qt::AlignHCenter);
 	layout->addWidget(m_nameLabel);
+	layout->addWidget(m_aliasesLabel);
 	layout->addLayout(buttonLayout);
 	layout->addStretch();
 
@@ -382,7 +387,8 @@ IconPreview::IconPreview(QWidget *parent)
 	clear();
 }
 
-void IconPreview::setIcon(const QPixmap &pixmap, const QString &name, const QString &svg) {
+void IconPreview::setIcon(const QPixmap &pixmap, const QString &name, const QString &svg,
+						  const QStringList &aliases) {
 	m_currentPixmap = pixmap;
 	m_currentSvg = svg;
 
@@ -395,6 +401,15 @@ void IconPreview::setIcon(const QPixmap &pixmap, const QString &name, const QStr
 
 	m_nameLabel->setText(name);
 
+	// Display aliases if any
+	if (aliases.isEmpty()) {
+		m_aliasesLabel->setVisible(false);
+	} else {
+		QString aliasText = tr("Aliases:\n") + aliases.join("\n");
+		m_aliasesLabel->setText(aliasText);
+		m_aliasesLabel->setVisible(true);
+	}
+
 	m_copySvgButton->setEnabled(!svg.isEmpty());
 	m_copyPngButton->setEnabled(!pixmap.isNull());
 	m_exportButton->setEnabled(!svg.isEmpty());
@@ -403,6 +418,8 @@ void IconPreview::setIcon(const QPixmap &pixmap, const QString &name, const QStr
 void IconPreview::clear() {
 	m_iconLabel->clear();
 	m_nameLabel->clear();
+	m_aliasesLabel->clear();
+	m_aliasesLabel->setVisible(false);
 	m_currentSvg.clear();
 	m_currentPixmap = QPixmap();
 
@@ -457,14 +474,9 @@ IconGrid::IconGrid(QWidget *parent)
 	contentLayout->addWidget(m_listView, 1);
 	contentLayout->addWidget(m_preview);
 
-	// Status bar
-	m_statusLabel = new QLabel(this);
-	m_statusLabel->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
-
 	mainLayout->addWidget(m_toolBar);
 	mainLayout->addWidget(m_searchBar);
 	mainLayout->addWidget(contentWidget, 1);
-	mainLayout->addWidget(m_statusLabel);
 
 	// Connections
 	connect(m_searchBar, &SearchBar::textChanged, this, &IconGrid::setFilter);
@@ -477,10 +489,6 @@ IconGrid::IconGrid(QWidget *parent)
 			this, &IconGrid::onSelectionChanged);
 	connect(m_listView, &QListView::doubleClicked, this, &IconGrid::onDoubleClicked);
 
-	connect(m_model, &IconModel::iconListChanged, this, &IconGrid::updateStatusBar);
-	connect(m_model, &IconModel::filterChanged, this, &IconGrid::updateStatusBar);
-
-	updateStatusBar();
 }
 
 IconGrid::~IconGrid() = default;
@@ -532,7 +540,10 @@ void IconGrid::onSelectionChanged(const QModelIndex &current, const QModelIndex 
 	int actualIndex = current.data(IconIndexRole).toInt();
 	QPixmap largePixmap = m_model->getIconPixmap(actualIndex);
 
-	m_preview->setIcon(largePixmap, name, svg);
+	// Get aliases for bitmap icons
+	QStringList aliases = m_model->getIconAliases(actualIndex);
+
+	m_preview->setIcon(largePixmap, name, svg, aliases);
 
 	emit iconSelected(actualIndex, name);
 }
@@ -547,17 +558,3 @@ void IconGrid::onDoubleClicked(const QModelIndex &index) {
 	emit iconDoubleClicked(actualIndex, name);
 }
 
-void IconGrid::updateStatusBar() {
-	int total = m_model->iconList() ? m_model->iconList()->getCount() : 0;
-	int visible = m_model->rowCount();
-	QString filter = m_model->filter();
-
-	QString status;
-	if (filter.isEmpty()) {
-		status = tr("%1 icons").arg(total);
-	} else {
-		status = tr("%1 of %2 icons (filter: \"%3\")").arg(visible).arg(total).arg(filter);
-	}
-
-	m_statusLabel->setText(status);
-}

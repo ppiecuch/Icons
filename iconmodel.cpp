@@ -199,6 +199,14 @@ QString IconModel::getIconName(int index) const {
 	return m_allIcons[index].name;
 }
 
+QStringList IconModel::getIconAliases(int index) const {
+	if (!m_iconList || index < 0 || index >= static_cast<int>(m_allIcons.size()))
+		return QStringList();
+	if (auto *bitmap = bitmapIconList())
+		return bitmap->getAliases(index);
+	return QStringList(); // No aliases for SVG icons
+}
+
 void IconModel::refresh() {
 	m_pixmapCache.clear();
 	emit dataChanged(index(0), index(rowCount() - 1));

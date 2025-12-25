@@ -80,6 +80,7 @@ public:
 	QPixmap getIconPixmap(int index) const;
 	QString getIconSvg(int index) const;
 	QString getIconName(int index) const;
+	QStringList getIconAliases(int index) const;
 
 public slots:
 	void refresh();

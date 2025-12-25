@@ -37,7 +37,7 @@ private:
 	int m_iconSize = 32;
 	bool m_showNames = true;
 	int m_padding = 8;
-	int m_nameHeight = 20;
+	int m_nameHeight = 32;  // Height for up to 2 lines of text
 };
 
 // Search bar widget
@@ -120,7 +120,8 @@ class IconPreview : public QWidget {
 public:
 	explicit IconPreview(QWidget *parent = nullptr);
 
-	void setIcon(const QPixmap &pixmap, const QString &name, const QString &svg);
+	void setIcon(const QPixmap &pixmap, const QString &name, const QString &svg,
+				 const QStringList &aliases = QStringList());
 	void clear();
 
 signals:
@@ -131,6 +132,7 @@ signals:
 private:
 	QLabel *m_iconLabel;
 	QLabel *m_nameLabel;
+	QLabel *m_aliasesLabel;
 	QToolButton *m_copySvgButton;
 	QToolButton *m_copyPngButton;
 	QToolButton *m_exportButton;
@@ -164,7 +166,6 @@ public slots:
 private slots:
 	void onSelectionChanged(const QModelIndex &current, const QModelIndex &previous);
 	void onDoubleClicked(const QModelIndex &index);
-	void updateStatusBar();
 
 private:
 	QListView *m_listView;
@@ -173,7 +174,6 @@ private:
 	SearchBar *m_searchBar;
 	IconToolBar *m_toolBar;
 	IconPreview *m_preview;
-	QLabel *m_statusLabel;
 };
 
 #endif // ICONGRID_H
