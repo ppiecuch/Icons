@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <RCC>
   <qresource prefix="img">
     <file>img/komsoft.png</file>
@@ -7,10 +8,5 @@
     <file>img/icon-edit-copy.svg</file>
     <file>img/icon-font-size-increase.svg</file>
     <file>img/icon-font-size-decrease.svg</file>
-  </qresource>
-  <qresource prefix="thmb">
-      <file>img/thumb-no.png</file>
-      <file>img/thumb-empty-bg.png</file>
-      <file>img/thumb-empty.png</file>
   </qresource>
 </RCC>
