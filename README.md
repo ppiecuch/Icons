@@ -1,4 +1,4 @@
-# SVG Icon Viewer
+# ![Logo](appicon.png | width=64) SVG Icon Viewer
 
 A Qt-based desktop application for browsing, previewing, and exporting SVG icons from multiple open-source icon collections.
 
