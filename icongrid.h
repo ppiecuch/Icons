@@ -8,11 +8,14 @@
 #include <QComboBox>
 #include <QToolButton>
 #include <QLabel>
+#include <QListWidget>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QColorDialog>
+#include <QMenu>
 
 #include "iconmodel.h"
+#include "extrawidgets.h"
 
 // Custom delegate for rendering icons in the grid
 class IconDelegate : public QStyledItemDelegate {
@@ -124,20 +127,36 @@ public:
 				 const QStringList &aliases = QStringList());
 	void clear();
 
+	void addToExtractList(const QString &name, const QPixmap &pixmap);
+	void clearExtractList();
+	QStringList extractList() const;
+
 signals:
 	void copySvgRequested();
 	void copyPngRequested();
+	void extractRequested();
 	void exportRequested();
+
+private slots:
+	void onButtonClicked(int index);
 
 private:
 	QLabel *m_iconLabel;
 	QLabel *m_nameLabel;
 	QLabel *m_aliasesLabel;
-	QToolButton *m_copySvgButton;
-	QToolButton *m_copyPngButton;
-	QToolButton *m_exportButton;
+	ActiveLabel *m_copySvgButton;
+	ActiveLabel *m_copyPngButton;
+	ActiveLabel *m_extractButton;
+	ActiveLabel *m_exportButton;
 	QString m_currentSvg;
 	QPixmap m_currentPixmap;
+
+	// Extract list
+	QLabel *m_extractListLabel;
+	QListWidget *m_extractListWidget;
+	ActiveLabel *m_clearExtractButton;
+	QStringList m_extractNames;
+	QWidget *m_spacer;
 };
 
 // Main icon grid widget combining all components
@@ -150,6 +169,7 @@ public:
 
 	void setIconList(IconList *list);
 	IconModel *model() const;
+	IconPreview *preview() const;
 
 	void setIconSize(int size);
 	int iconSize() const;
@@ -166,6 +186,8 @@ public slots:
 private slots:
 	void onSelectionChanged(const QModelIndex &current, const QModelIndex &previous);
 	void onDoubleClicked(const QModelIndex &index);
+	void onContextMenu(const QPoint &pos);
+	void onAddToExtract();
 
 private:
 	QListView *m_listView;
@@ -174,6 +196,8 @@ private:
 	SearchBar *m_searchBar;
 	IconToolBar *m_toolBar;
 	IconPreview *m_preview;
+	QMenu *m_contextMenu;
+	QAction *m_addToExtractAction;
 };
 
 #endif // ICONGRID_H

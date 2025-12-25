@@ -81,7 +81,7 @@
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionExport">
    <property name="text">
-    <string>Export...</string>
+    <string>Extract ...</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+E</string>

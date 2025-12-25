@@ -340,51 +340,83 @@ IconPreview::IconPreview(QWidget *parent)
 	m_aliasesLabel->setStyleSheet("QLabel { color: gray; font-size: 10px; }");
 	m_aliasesLabel->setVisible(false);
 
-	// Buttons - vertical layout
+	// Buttons using ActiveLabel
 	auto *buttonLayout = new QVBoxLayout();
 	buttonLayout->setSpacing(4);
 
-	m_copySvgButton = new QToolButton(this);
-	m_copySvgButton->setText(tr("Copy SVG"));
+	m_copySvgButton = new ActiveLabel(0, "Copy SVG", "copy_svg_button", this);
 	m_copySvgButton->setToolTip(tr("Copy SVG source to clipboard"));
-	m_copySvgButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-	m_copyPngButton = new QToolButton(this);
-	m_copyPngButton->setText(tr("Copy PNG"));
+	m_copyPngButton = new ActiveLabel(1, "Copy PNG", "copy_png_button", this);
 	m_copyPngButton->setToolTip(tr("Copy as PNG image to clipboard"));
-	m_copyPngButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-	m_exportButton = new QToolButton(this);
-	m_exportButton->setText(tr("Export..."));
-	m_exportButton->setToolTip(tr("Export icon to file"));
-	m_exportButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	m_extractButton = new ActiveLabel(2, "Extract ...", "extract_button", this);
+	m_extractButton->setToolTip(tr("Extract selected icons to files"));
+
+	m_exportButton = new ActiveLabel(4, "Export ...", "export_button", this);
+	m_exportButton->setToolTip(tr("Export current icon to file"));
 
 	buttonLayout->addWidget(m_copySvgButton);
 	buttonLayout->addWidget(m_copyPngButton);
+	buttonLayout->addWidget(m_extractButton);
 	buttonLayout->addWidget(m_exportButton);
+
+	// Extract list section
+	m_extractListLabel = new QLabel(tr("Extract List:"), this);
+	m_extractListLabel->setVisible(false);
+
+	m_extractListWidget = new QListWidget(this);
+	m_extractListWidget->setVisible(false);
+
+	m_clearExtractButton = new ActiveLabel(3, "Clear", "clear_extract_button", this);
+	m_clearExtractButton->setToolTip(tr("Clear extract list"));
+	m_clearExtractButton->setVisible(false);
+
+	// Spacer to fill space when extract list is hidden
+	m_spacer = new QWidget(this);
+	m_spacer->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
 
 	layout->addWidget(m_iconLabel, 0, Qt::AlignHCenter);
 	layout->addWidget(m_nameLabel);
 	layout->addWidget(m_aliasesLabel);
 	layout->addLayout(buttonLayout);
-	layout->addStretch();
+	layout->addWidget(m_spacer, 1);  // spacer when extract list is hidden
+	layout->addWidget(m_extractListLabel);
+	layout->addWidget(m_extractListWidget, 1);  // stretch factor 1 to fill space
+	layout->addWidget(m_clearExtractButton);
 
 	// Connections
-	connect(m_copySvgButton, &QToolButton::clicked, [this]() {
-		if (!m_currentSvg.isEmpty()) {
-			QApplication::clipboard()->setText(m_currentSvg);
-		}
-	});
-
-	connect(m_copyPngButton, &QToolButton::clicked, [this]() {
-		if (!m_currentPixmap.isNull()) {
-			QApplication::clipboard()->setPixmap(m_currentPixmap);
-		}
-	});
-
-	connect(m_exportButton, &QToolButton::clicked, this, &IconPreview::exportRequested);
+	connect(m_copySvgButton, &ActiveLabel::clicked, this, &IconPreview::onButtonClicked);
+	connect(m_copyPngButton, &ActiveLabel::clicked, this, &IconPreview::onButtonClicked);
+	connect(m_extractButton, &ActiveLabel::clicked, this, &IconPreview::onButtonClicked);
+	connect(m_clearExtractButton, &ActiveLabel::clicked, this, &IconPreview::onButtonClicked);
+	connect(m_exportButton, &ActiveLabel::clicked, this, &IconPreview::onButtonClicked);
 
 	clear();
+}
+
+void IconPreview::onButtonClicked(int index) {
+	switch (index) {
+		case 0: // Copy SVG
+			if (!m_currentSvg.isEmpty()) {
+				QApplication::clipboard()->setText(m_currentSvg);
+			}
+			break;
+		case 1: // Copy PNG
+			if (!m_currentPixmap.isNull()) {
+				QApplication::clipboard()->setPixmap(m_currentPixmap);
+			}
+			break;
+		case 2: // Extract (batch)
+			emit extractRequested();
+			break;
+		case 3: // Clear extract list
+			clearExtractList();
+			break;
+		case 4: // Export (single)
+			emit exportRequested();
+			break;
+	}
 }
 
 void IconPreview::setIcon(const QPixmap &pixmap, const QString &name, const QString &svg,
@@ -412,7 +444,45 @@ void IconPreview::setIcon(const QPixmap &pixmap, const QString &name, const QStr
 
 	m_copySvgButton->setEnabled(!svg.isEmpty());
 	m_copyPngButton->setEnabled(!pixmap.isNull());
-	m_exportButton->setEnabled(!svg.isEmpty());
+	m_extractButton->setEnabled(!m_extractNames.isEmpty());
+	m_exportButton->setEnabled(!svg.isEmpty() || !pixmap.isNull());
+}
+
+void IconPreview::addToExtractList(const QString &name, const QPixmap &pixmap) {
+	if (name.isEmpty() || m_extractNames.contains(name))
+		return;
+
+	m_extractNames.append(name);
+
+	QListWidgetItem *item = new QListWidgetItem(m_extractListWidget);
+	item->setText(name);
+	if (!pixmap.isNull()) {
+		item->setIcon(QIcon(pixmap.scaled(16, 16, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+	}
+	item->setData(Qt::UserRole, name);
+
+	// Show the extract list UI, hide spacer
+	m_spacer->setVisible(false);
+	m_extractListLabel->setVisible(true);
+	m_extractListWidget->setVisible(true);
+	m_clearExtractButton->setVisible(true);
+	m_extractButton->setEnabled(true);
+}
+
+void IconPreview::clearExtractList() {
+	m_extractNames.clear();
+	m_extractListWidget->clear();
+
+	// Hide the extract list UI, show spacer
+	m_extractListLabel->setVisible(false);
+	m_extractListWidget->setVisible(false);
+	m_clearExtractButton->setVisible(false);
+	m_extractButton->setEnabled(false);
+	m_spacer->setVisible(true);
+}
+
+QStringList IconPreview::extractList() const {
+	return m_extractNames;
 }
 
 void IconPreview::clear() {
@@ -425,6 +495,7 @@ void IconPreview::clear() {
 
 	m_copySvgButton->setEnabled(false);
 	m_copyPngButton->setEnabled(false);
+	m_extractButton->setEnabled(!m_extractNames.isEmpty());
 	m_exportButton->setEnabled(false);
 }
 
@@ -478,6 +549,13 @@ IconGrid::IconGrid(QWidget *parent)
 	mainLayout->addWidget(m_searchBar);
 	mainLayout->addWidget(contentWidget, 1);
 
+	// Context menu
+	m_contextMenu = new QMenu(this);
+	m_addToExtractAction = m_contextMenu->addAction(tr("Add to List"));
+	connect(m_addToExtractAction, &QAction::triggered, this, &IconGrid::onAddToExtract);
+
+	m_listView->setContextMenuPolicy(Qt::CustomContextMenu);
+
 	// Connections
 	connect(m_searchBar, &SearchBar::textChanged, this, &IconGrid::setFilter);
 
@@ -488,6 +566,7 @@ IconGrid::IconGrid(QWidget *parent)
 	connect(m_listView->selectionModel(), &QItemSelectionModel::currentChanged,
 			this, &IconGrid::onSelectionChanged);
 	connect(m_listView, &QListView::doubleClicked, this, &IconGrid::onDoubleClicked);
+	connect(m_listView, &QListView::customContextMenuRequested, this, &IconGrid::onContextMenu);
 
 }
 
@@ -500,6 +579,10 @@ void IconGrid::setIconList(IconList *list) {
 
 IconModel *IconGrid::model() const {
 	return m_model;
+}
+
+IconPreview *IconGrid::preview() const {
+	return m_preview;
 }
 
 void IconGrid::setIconSize(int size) {
@@ -556,5 +639,25 @@ void IconGrid::onDoubleClicked(const QModelIndex &index) {
 	QString name = index.data(IconNameRole).toString();
 
 	emit iconDoubleClicked(actualIndex, name);
+}
+
+void IconGrid::onContextMenu(const QPoint &pos) {
+	QModelIndex index = m_listView->indexAt(pos);
+	if (!index.isValid())
+		return;
+
+	m_contextMenu->exec(m_listView->viewport()->mapToGlobal(pos));
+}
+
+void IconGrid::onAddToExtract() {
+	QModelIndex current = m_listView->currentIndex();
+	if (!current.isValid())
+		return;
+
+	QString name = current.data(IconNameRole).toString();
+	int actualIndex = current.data(IconIndexRole).toInt();
+	QPixmap pixmap = m_model->getIconPixmap(actualIndex);
+
+	m_preview->addToExtractList(name, pixmap);
 }
 

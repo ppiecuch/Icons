@@ -30,6 +30,9 @@ ActiveLabel::ActiveLabel(QWidget *parent) :
 	setFrameStyle(QFrame::Panel | QFrame::Raised);
 	setBackgroundRole(QPalette::Window);
 	setAlignment(Qt::AlignCenter);
+#ifdef Q_OS_MACOS
+	setAttribute(Qt::WA_MacSmallSize);
+#endif
 }
 
 ActiveLabel::ActiveLabel(int index, const char *title, const char *name, QWidget *parent) :
@@ -39,6 +42,9 @@ ActiveLabel::ActiveLabel(int index, const char *title, const char *name, QWidget
 	setFrameStyle(QFrame::Panel | QFrame::Raised);
 	setBackgroundRole(QPalette::Window);
 	setAlignment(Qt::AlignCenter);
+#ifdef Q_OS_MACOS
+	setAttribute(Qt::WA_MacSmallSize);
+#endif
 }
 
 ActiveLabel::ActiveLabel(int index, const QIcon &icon, const char *tooltip, const char *name, QWidget *parent) :
@@ -50,6 +56,9 @@ ActiveLabel::ActiveLabel(int index, const QIcon &icon, const char *tooltip, cons
 	setFrameStyle(QFrame::Panel | QFrame::Raised);
 	setBackgroundRole(QPalette::Window);
 	setAlignment(Qt::AlignCenter);
+#ifdef Q_OS_MACOS
+	setAttribute(Qt::WA_MacSmallSize);
+#endif
 }
 
 void ActiveLabel::mousePressEvent(QMouseEvent *e) {
