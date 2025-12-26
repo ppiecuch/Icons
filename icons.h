@@ -29,7 +29,7 @@ private slots:
 	void onCollectionChanged(const QString &name);
 	void onStyleChanged(const QString &styleName);
 	void onBitmapSizeChanged(int size);
-	void onIconSelected(int index, const QString &name);
+	void onIconSelected(int index, const QString &name, const QStringList &tags, const QString &category);
 	void onIconDoubleClicked(int index, const QString &name);
 
 	void onCopySvg();

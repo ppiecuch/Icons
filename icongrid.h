@@ -140,7 +140,8 @@ public:
 	explicit IconPreview(QWidget *parent = nullptr);
 
 	void setIcon(const QPixmap &pixmap, const QString &name, const QString &svg,
-				 const QString &style, int size, const QStringList &aliases = QStringList());
+				 const QString &style, int size, const QStringList &aliases = QStringList(),
+				 const QStringList &tags = QStringList(), const QString &category = QString());
 	void clear();
 
 	void addToExportList(const ExportIconInfo &info);
@@ -179,6 +180,8 @@ private:
 	QString m_currentStyle;
 	int m_currentSize = 0;
 	QStringList m_currentAliases;
+	QStringList m_currentTags;
+	QString m_currentCategory;
 	QPixmap m_currentPixmap;
 
 	// Export content
@@ -216,7 +219,7 @@ public:
 	int iconSize() const;
 
 signals:
-	void iconSelected(int index, const QString &name);
+	void iconSelected(int index, const QString &name, const QStringList &tags, const QString &category);
 
 public slots:
 	void setFilter(const QString &filter);

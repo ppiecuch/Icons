@@ -214,6 +214,22 @@ QStringList IconModel::getIconAliases(int index) const {
 	return QStringList(); // No aliases for SVG icons
 }
 
+QStringList IconModel::getIconTags(int index) const {
+	if (!m_iconList || index < 0 || index >= static_cast<int>(m_allIcons.size()))
+		return QStringList();
+	if (auto *svg = svgIconList())
+		return svg->getTags(index);
+	return QStringList();
+}
+
+QString IconModel::getIconCategory(int index) const {
+	if (!m_iconList || index < 0 || index >= static_cast<int>(m_allIcons.size()))
+		return QString();
+	if (auto *svg = svgIconList())
+		return svg->getCategory(index);
+	return QString();
+}
+
 EntityMap IconModel::getIconEntities(int index) const {
 	if (!m_iconList || index < 0 || index >= static_cast<int>(m_allIcons.size()))
 		return EntityMap();

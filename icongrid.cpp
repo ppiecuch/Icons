@@ -497,6 +497,12 @@ void IconPreview::onButtonClicked(int index) {
 				if (!m_currentAliases.isEmpty()) {
 					info += QString("Aliases: %1\n").arg(m_currentAliases.join(", "));
 				}
+				if (!m_currentCategory.isEmpty()) {
+					info += QString("Category: %1\n").arg(m_currentCategory);
+				}
+				if (!m_currentTags.isEmpty()) {
+					info += QString("Tags: %1\n").arg(m_currentTags.join(", "));
+				}
 				QApplication::clipboard()->setText(info.trimmed());
 			}
 			break;
@@ -510,13 +516,16 @@ void IconPreview::onButtonClicked(int index) {
 }
 
 void IconPreview::setIcon(const QPixmap &pixmap, const QString &name, const QString &svg,
-						  const QString &style, int size, const QStringList &aliases) {
+						  const QString &style, int size, const QStringList &aliases,
+						  const QStringList &tags, const QString &category) {
 	m_currentPixmap = pixmap;
 	m_currentSvg = svg;
 	m_currentName = name;
 	m_currentStyle = style;
 	m_currentSize = size;
 	m_currentAliases = aliases;
+	m_currentTags = tags;
+	m_currentCategory = category;
 
 	if (pixmap.isNull()) {
 		m_iconLabel->clear();
@@ -783,8 +792,11 @@ IconGrid::IconGrid(QWidget *parent)
 			QPixmap largePixmap = m_model->getIconPixmap(actualIndex);
 			QString name = current.data(IconNameRole).toString();
 			QString svg = m_model->getIconSvg(actualIndex);
+			QStringList tags = m_model->getIconTags(actualIndex);
+			QString category = m_model->getIconCategory(actualIndex);
 			m_preview->setIcon(largePixmap, name, svg, m_toolBar->currentStyle(),
-							   m_model->iconSize(), m_model->getIconAliases(actualIndex));
+							   m_model->iconSize(), m_model->getIconAliases(actualIndex),
+							   tags, category);
 		}
 	});
 
@@ -850,15 +862,19 @@ void IconGrid::onSelectionChanged(const QModelIndex &current, const QModelIndex 
 	// Get aliases for bitmap icons
 	QStringList aliases = m_model->getIconAliases(actualIndex);
 
+	// Get metadata (tags and category)
+	QStringList tags = m_model->getIconTags(actualIndex);
+	QString category = m_model->getIconCategory(actualIndex);
+
 	QString style = m_toolBar->currentStyle();
 	int size = m_model->iconSize();
-	m_preview->setIcon(largePixmap, name, svg, style, size, aliases);
+	m_preview->setIcon(largePixmap, name, svg, style, size, aliases, tags, category);
 
 	// Set entities if any
 	EntityMap entities = m_model->getIconEntities(actualIndex);
 	m_preview->setEntities(entities);
 
-	emit iconSelected(actualIndex, name);
+	emit iconSelected(actualIndex, name, tags, category);
 }
 
 void IconGrid::onDoubleClicked(const QModelIndex &index) {

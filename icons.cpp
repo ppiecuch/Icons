@@ -7,6 +7,7 @@
 #include <QClipboard>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QSettings>
 #include <QDebug>
 
 // Generated icon list headers - Bootstrap
@@ -232,6 +233,23 @@ void MainWindow::loadCollections() {
 		connect(toolbar, &IconToolBar::collectionChanged, this, &MainWindow::onCollectionChanged);
 		connect(toolbar, &IconToolBar::styleChanged, this, &MainWindow::onStyleChanged);
 		connect(toolbar, &IconToolBar::bitmapSizeChanged, this, &MainWindow::onBitmapSizeChanged);
+
+		// Restore colors from preferences
+		QSettings settings;
+		QColor fillColor = settings.value("fillColor", QColor(Qt::black)).value<QColor>();
+		QColor bgColor = settings.value("backgroundColor", QColor(Qt::transparent)).value<QColor>();
+		toolbar->setFillColor(fillColor);
+		toolbar->setBackgroundColor(bgColor);
+
+		// Save colors when changed
+		connect(toolbar, &IconToolBar::fillColorChanged, this, [](const QColor &color) {
+			QSettings settings;
+			settings.setValue("fillColor", color);
+		});
+		connect(toolbar, &IconToolBar::backgroundColorChanged, this, [](const QColor &color) {
+			QSettings settings;
+			settings.setValue("backgroundColor", color);
+		});
 	}
 
 	// Load the first available collection with default style (Outline)
@@ -378,10 +396,24 @@ void MainWindow::onBitmapSizeChanged(int size) {
 	}
 }
 
-void MainWindow::onIconSelected(int index, const QString &name) {
+void MainWindow::onIconSelected(int index, const QString &name, const QStringList &tags, const QString &category) {
 	m_selectedIndex = index;
 	m_selectedName = name;
-	statusBar()->showMessage(tr("Selected: %1").arg(name));
+
+	// Build status message with metadata
+	QString message = tr("Selected: %1").arg(name);
+	if (!category.isEmpty()) {
+		message += tr(" | Category: %1").arg(category);
+	}
+	if (!tags.isEmpty()) {
+		// Show first few tags to avoid overflow
+		QStringList displayTags = tags.mid(0, 5);
+		message += tr(" | Tags: %1").arg(displayTags.join(", "));
+		if (tags.size() > 5) {
+			message += tr(" (+%1 more)").arg(tags.size() - 5);
+		}
+	}
+	statusBar()->showMessage(message);
 }
 
 void MainWindow::onIconDoubleClicked(int index, const QString &name) {

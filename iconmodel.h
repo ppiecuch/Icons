@@ -81,6 +81,8 @@ public:
 	QString getIconSvg(int index) const;
 	QString getIconName(int index) const;
 	QStringList getIconAliases(int index) const;
+	QStringList getIconTags(int index) const;
+	QString getIconCategory(int index) const;
 
 	// Entity support
 	EntityMap getIconEntities(int index) const;

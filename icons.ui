@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>SVG Icon Viewer</string>
+   <string>Icon Viewer</string>
   </property>
   <property name="unifiedTitleAndToolBarOnMac">
    <bool>true</bool>
