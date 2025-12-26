@@ -7,8 +7,13 @@
 #include <QLineEdit>
 #include <QComboBox>
 #include <QToolButton>
+#include <QCheckBox>
 #include <QLabel>
 #include <QListWidget>
+#include <QTableWidget>
+#include <QStackedWidget>
+#include <QButtonGroup>
+#include <QHeaderView>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QColorDialog>
@@ -16,6 +21,15 @@
 
 #include "iconmodel.h"
 #include "extrawidgets.h"
+
+// Info for icon export
+struct ExportIconInfo {
+	QString name;
+	QPixmap pixmap;
+	QString svg;
+	QString style;
+	int size;
+};
 
 // Custom delegate for rendering icons in the grid
 class IconDelegate : public QStyledItemDelegate {
@@ -82,6 +96,8 @@ public:
 	void setBitmapSizes(const QList<int> &sizes);
 	int currentBitmapSize() const;
 
+	void setBitmapMode(bool isBitmap);
+
 signals:
 	void collectionChanged(const QString &name);
 	void fillColorChanged(const QColor &color);
@@ -124,39 +140,63 @@ public:
 	explicit IconPreview(QWidget *parent = nullptr);
 
 	void setIcon(const QPixmap &pixmap, const QString &name, const QString &svg,
-				 const QStringList &aliases = QStringList());
+				 const QString &style, int size, const QStringList &aliases = QStringList());
 	void clear();
 
-	void addToExtractList(const QString &name, const QPixmap &pixmap);
-	void clearExtractList();
-	QStringList extractList() const;
+	void addToExportList(const ExportIconInfo &info);
+	void clearExportList();
+	QList<ExportIconInfo> exportList() const;
+
+	void setBitmapMode(bool isBitmap);
+
+	// Entity support
+	void setEntities(const EntityMap &entities);
+	EntityMap currentEntities() const;
+	bool hasEntities() const;
 
 signals:
 	void copySvgRequested();
 	void copyPngRequested();
-	void extractRequested();
-	void exportRequested();
+	void exportRequested(bool merge);
+	void entitiesChanged(const EntityMap &entities);
 
 private slots:
 	void onButtonClicked(int index);
+	void onEntityValueChanged(int row, int column);
 
 private:
+	void updateEntitiesTable();
+
 	QLabel *m_iconLabel;
 	QLabel *m_nameLabel;
 	QLabel *m_aliasesLabel;
 	ActiveLabel *m_copySvgButton;
 	ActiveLabel *m_copyPngButton;
-	ActiveLabel *m_extractButton;
+	ActiveLabel *m_copyInfoButton;
 	ActiveLabel *m_exportButton;
 	QString m_currentSvg;
+	QString m_currentName;
+	QString m_currentStyle;
+	int m_currentSize = 0;
+	QStringList m_currentAliases;
 	QPixmap m_currentPixmap;
 
-	// Extract list
-	QLabel *m_extractListLabel;
-	QListWidget *m_extractListWidget;
-	ActiveLabel *m_clearExtractButton;
-	QStringList m_extractNames;
-	QWidget *m_spacer;
+	// Export content
+	QWidget *m_exportWidget;
+	QListWidget *m_exportListWidget;
+	ActiveLabel *m_clearExportButton;
+	QList<ExportIconInfo> m_exportList;
+	QLabel *m_exportOptionsLabel;
+	QCheckBox *m_exportMergedCheckbox;
+
+	// View switcher (Export/Entities buttons + stacked widget)
+	QWidget *m_viewSwitcher;
+	QToolButton *m_exportViewButton;
+	QToolButton *m_entitiesViewButton;
+	QStackedWidget *m_stackedWidget;
+	QWidget *m_entitiesWidget;
+	QTableWidget *m_entitiesTable;
+	EntityMap m_entities;
 };
 
 // Main icon grid widget combining all components
@@ -170,13 +210,13 @@ public:
 	void setIconList(IconList *list);
 	IconModel *model() const;
 	IconPreview *preview() const;
+	IconToolBar *toolBar() const;
 
 	void setIconSize(int size);
 	int iconSize() const;
 
 signals:
 	void iconSelected(int index, const QString &name);
-	void iconDoubleClicked(int index, const QString &name);
 
 public slots:
 	void setFilter(const QString &filter);
@@ -187,9 +227,11 @@ private slots:
 	void onSelectionChanged(const QModelIndex &current, const QModelIndex &previous);
 	void onDoubleClicked(const QModelIndex &index);
 	void onContextMenu(const QPoint &pos);
-	void onAddToExtract();
+	void onAddToExport();
 
 private:
+	void addCurrentToExportList();
+
 	QListView *m_listView;
 	IconModel *m_model;
 	IconDelegate *m_delegate;
@@ -197,7 +239,7 @@ private:
 	IconToolBar *m_toolBar;
 	IconPreview *m_preview;
 	QMenu *m_contextMenu;
-	QAction *m_addToExtractAction;
+	QAction *m_addToExportAction;
 };
 
 #endif // ICONGRID_H

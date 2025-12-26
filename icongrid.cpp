@@ -58,8 +58,14 @@ void IconDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option,
 						? option.palette.highlightedText().color()
 						: option.palette.text().color());
 
-		// Draw text with word wrap, up to 2 lines
-		painter->drawText(textRect, Qt::AlignHCenter | Qt::AlignTop | Qt::TextWordWrap, name);
+		// Check if text fits on single line
+		QFontMetrics fm(painter->font());
+		int textWidth = fm.horizontalAdvance(name);
+		int alignment = (textWidth <= textRect.width())
+						? (Qt::AlignHCenter | Qt::AlignTop)
+						: (Qt::AlignLeft | Qt::AlignTop | Qt::TextWrapAnywhere);
+
+		painter->drawText(textRect, alignment, name);
 	}
 
 	painter->restore();
@@ -291,6 +297,12 @@ void IconToolBar::onBitmapSizeChanged(int index) {
 	emit bitmapSizeChanged(currentBitmapSize());
 }
 
+void IconToolBar::setBitmapMode(bool isBitmap) {
+	// Hide fill/background color buttons for bitmap collections
+	m_fillColorButton->setVisible(!isBitmap);
+	m_bgColorButton->setVisible(!isBitmap);
+}
+
 void IconToolBar::updateFillColorButton() {
 	QPixmap pixmap(16, 16);
 	pixmap.fill(m_fillColor);
@@ -320,6 +332,7 @@ IconPreview::IconPreview(QWidget *parent)
 	: QWidget(parent)
 {
 	auto *layout = new QVBoxLayout(this);
+	layout->setContentsMargins(4, 4, 4, 4);
 	layout->setAlignment(Qt::AlignTop);
 
 	// Icon display
@@ -350,47 +363,115 @@ IconPreview::IconPreview(QWidget *parent)
 	m_copyPngButton = new ActiveLabel(1, "Copy PNG", "copy_png_button", this);
 	m_copyPngButton->setToolTip(tr("Copy as PNG image to clipboard"));
 
-	m_extractButton = new ActiveLabel(2, "Extract ...", "extract_button", this);
-	m_extractButton->setToolTip(tr("Extract selected icons to files"));
+	m_copyInfoButton = new ActiveLabel(2, "Copy Info", "copy_info_button", this);
+	m_copyInfoButton->setToolTip(tr("Copy icon information to clipboard"));
 
-	m_exportButton = new ActiveLabel(4, "Export ...", "export_button", this);
-	m_exportButton->setToolTip(tr("Export current icon to file"));
+	m_exportButton = new ActiveLabel(3, "Export ...", "export_button", this);
+	m_exportButton->setToolTip(tr("Export icons from list to files"));
 
 	buttonLayout->addWidget(m_copySvgButton);
 	buttonLayout->addWidget(m_copyPngButton);
-	buttonLayout->addWidget(m_extractButton);
+	buttonLayout->addWidget(m_copyInfoButton);
 	buttonLayout->addWidget(m_exportButton);
 
-	// Extract list section
-	m_extractListLabel = new QLabel(tr("Extract List:"), this);
-	m_extractListLabel->setVisible(false);
+	// === View switcher (buttons + stacked widget) ===
+	m_viewSwitcher = new QWidget(this);
+	m_viewSwitcher->setVisible(false);  // Hidden initially (shown when entities exist)
+	auto *switcherLayout = new QVBoxLayout(m_viewSwitcher);
+	switcherLayout->setContentsMargins(0, 0, 0, 0);
+	switcherLayout->setSpacing(2);
 
-	m_extractListWidget = new QListWidget(this);
-	m_extractListWidget->setVisible(false);
+	// Buttons for switching views
+	auto *buttonBar = new QWidget(m_viewSwitcher);
+	auto *buttonBarLayout = new QHBoxLayout(buttonBar);
+	buttonBarLayout->setContentsMargins(0, 0, 0, 0);
+	buttonBarLayout->setSpacing(0);
 
-	m_clearExtractButton = new ActiveLabel(3, "Clear", "clear_extract_button", this);
-	m_clearExtractButton->setToolTip(tr("Clear extract list"));
-	m_clearExtractButton->setVisible(false);
+	m_exportViewButton = new QToolButton(buttonBar);
+	m_exportViewButton->setText(tr("Export"));
+	m_exportViewButton->setCheckable(true);
+	m_exportViewButton->setChecked(true);
+	m_exportViewButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-	// Spacer to fill space when extract list is hidden
-	m_spacer = new QWidget(this);
-	m_spacer->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+	m_entitiesViewButton = new QToolButton(buttonBar);
+	m_entitiesViewButton->setText(tr("Entities"));
+	m_entitiesViewButton->setCheckable(true);
+	m_entitiesViewButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+	buttonBarLayout->addWidget(m_exportViewButton);
+	buttonBarLayout->addWidget(m_entitiesViewButton);
+
+	// Stacked widget for content
+	m_stackedWidget = new QStackedWidget(m_viewSwitcher);
+
+	switcherLayout->addWidget(buttonBar);
+	switcherLayout->addWidget(m_stackedWidget, 1);
+
+	// === Export widget ===
+	m_exportWidget = new QWidget(this);
+	auto *exportLayout = new QVBoxLayout(m_exportWidget);
+	exportLayout->setContentsMargins(0, 4, 0, 0);
+
+	m_exportOptionsLabel = new QLabel(tr("Export Options:"), m_exportWidget);
+	m_exportMergedCheckbox = new QCheckBox(tr("Export merged png"), m_exportWidget);
+	m_exportMergedCheckbox->setToolTip(tr("Merge all icons into a single PNG image"));
+
+	m_exportListWidget = new QListWidget(m_exportWidget);
+
+	m_clearExportButton = new ActiveLabel(4, "Clear", "clear_export_button", m_exportWidget);
+	m_clearExportButton->setToolTip(tr("Clear export list"));
+
+	exportLayout->addWidget(m_exportOptionsLabel);
+	exportLayout->addWidget(m_exportMergedCheckbox);
+	exportLayout->addWidget(m_exportListWidget, 1);
+	exportLayout->addWidget(m_clearExportButton);
+
+	// === Entities widget ===
+	m_entitiesWidget = new QWidget();
+	auto *entitiesLayout = new QVBoxLayout(m_entitiesWidget);
+	entitiesLayout->setContentsMargins(0, 4, 0, 0);
+
+	m_entitiesTable = new QTableWidget(m_entitiesWidget);
+	m_entitiesTable->setAttribute(Qt::WA_MacSmallSize);
+	m_entitiesTable->setColumnCount(2);
+	m_entitiesTable->setHorizontalHeaderLabels({tr("Name"), tr("Value")});
+	m_entitiesTable->horizontalHeader()->setStretchLastSection(true);
+	m_entitiesTable->verticalHeader()->setVisible(false);
+	m_entitiesTable->verticalHeader()->setDefaultSectionSize(20);
+	m_entitiesTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+
+	entitiesLayout->addWidget(m_entitiesTable);
+
+	// Add widgets to stacked widget
+	m_stackedWidget->addWidget(m_exportWidget);
+	m_stackedWidget->addWidget(m_entitiesWidget);
 
 	layout->addWidget(m_iconLabel, 0, Qt::AlignHCenter);
 	layout->addWidget(m_nameLabel);
 	layout->addWidget(m_aliasesLabel);
 	layout->addLayout(buttonLayout);
-	layout->addWidget(m_spacer, 1);  // spacer when extract list is hidden
-	layout->addWidget(m_extractListLabel);
-	layout->addWidget(m_extractListWidget, 1);  // stretch factor 1 to fill space
-	layout->addWidget(m_clearExtractButton);
+	layout->addWidget(m_exportWidget, 1);   // Export widget shown directly initially
+	layout->addWidget(m_viewSwitcher, 1);   // View switcher hidden initially
 
 	// Connections
 	connect(m_copySvgButton, &ActiveLabel::clicked, this, &IconPreview::onButtonClicked);
 	connect(m_copyPngButton, &ActiveLabel::clicked, this, &IconPreview::onButtonClicked);
-	connect(m_extractButton, &ActiveLabel::clicked, this, &IconPreview::onButtonClicked);
-	connect(m_clearExtractButton, &ActiveLabel::clicked, this, &IconPreview::onButtonClicked);
+	connect(m_copyInfoButton, &ActiveLabel::clicked, this, &IconPreview::onButtonClicked);
 	connect(m_exportButton, &ActiveLabel::clicked, this, &IconPreview::onButtonClicked);
+	connect(m_clearExportButton, &ActiveLabel::clicked, this, &IconPreview::onButtonClicked);
+	connect(m_entitiesTable, &QTableWidget::cellChanged, this, &IconPreview::onEntityValueChanged);
+
+	// View switcher button connections
+	connect(m_exportViewButton, &QToolButton::clicked, this, [this]() {
+		m_exportViewButton->setChecked(true);
+		m_entitiesViewButton->setChecked(false);
+		m_stackedWidget->setCurrentIndex(0);
+	});
+	connect(m_entitiesViewButton, &QToolButton::clicked, this, [this]() {
+		m_exportViewButton->setChecked(false);
+		m_entitiesViewButton->setChecked(true);
+		m_stackedWidget->setCurrentIndex(1);
+	});
 
 	clear();
 }
@@ -407,22 +488,35 @@ void IconPreview::onButtonClicked(int index) {
 				QApplication::clipboard()->setPixmap(m_currentPixmap);
 			}
 			break;
-		case 2: // Extract (batch)
-			emit extractRequested();
+		case 2: // Copy Info
+			{
+				QString info;
+				info += QString("Name: %1\n").arg(m_currentName);
+				info += QString("Style: %1\n").arg(m_currentStyle);
+				info += QString("Size: %1\n").arg(m_currentSize);
+				if (!m_currentAliases.isEmpty()) {
+					info += QString("Aliases: %1\n").arg(m_currentAliases.join(", "));
+				}
+				QApplication::clipboard()->setText(info.trimmed());
+			}
 			break;
-		case 3: // Clear extract list
-			clearExtractList();
+		case 3: // Export
+			emit exportRequested(m_exportMergedCheckbox->isChecked());
 			break;
-		case 4: // Export (single)
-			emit exportRequested();
+		case 4: // Clear export list
+			clearExportList();
 			break;
 	}
 }
 
 void IconPreview::setIcon(const QPixmap &pixmap, const QString &name, const QString &svg,
-						  const QStringList &aliases) {
+						  const QString &style, int size, const QStringList &aliases) {
 	m_currentPixmap = pixmap;
 	m_currentSvg = svg;
+	m_currentName = name;
+	m_currentStyle = style;
+	m_currentSize = size;
+	m_currentAliases = aliases;
 
 	if (pixmap.isNull()) {
 		m_iconLabel->clear();
@@ -444,45 +538,43 @@ void IconPreview::setIcon(const QPixmap &pixmap, const QString &name, const QStr
 
 	m_copySvgButton->setEnabled(!svg.isEmpty());
 	m_copyPngButton->setEnabled(!pixmap.isNull());
-	m_extractButton->setEnabled(!m_extractNames.isEmpty());
-	m_exportButton->setEnabled(!svg.isEmpty() || !pixmap.isNull());
+	m_copyInfoButton->setEnabled(!name.isEmpty());
+	m_exportButton->setEnabled(!m_exportList.isEmpty());
 }
 
-void IconPreview::addToExtractList(const QString &name, const QPixmap &pixmap) {
-	if (name.isEmpty() || m_extractNames.contains(name))
-		return;
-
-	m_extractNames.append(name);
-
-	QListWidgetItem *item = new QListWidgetItem(m_extractListWidget);
-	item->setText(name);
-	if (!pixmap.isNull()) {
-		item->setIcon(QIcon(pixmap.scaled(16, 16, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+void IconPreview::addToExportList(const ExportIconInfo &info) {
+	// Check if already in list by name
+	for (const auto &existing : m_exportList) {
+		if (existing.name == info.name && existing.style == info.style && existing.size == info.size)
+			return;
 	}
-	item->setData(Qt::UserRole, name);
 
-	// Show the extract list UI, hide spacer
-	m_spacer->setVisible(false);
-	m_extractListLabel->setVisible(true);
-	m_extractListWidget->setVisible(true);
-	m_clearExtractButton->setVisible(true);
-	m_extractButton->setEnabled(true);
+	m_exportList.append(info);
+
+	QListWidgetItem *item = new QListWidgetItem(m_exportListWidget);
+	QString displayText = QString("%1 (%2, %3)").arg(info.name).arg(info.style).arg(info.size);
+	item->setText(displayText);
+	if (!info.pixmap.isNull()) {
+		item->setIcon(QIcon(info.pixmap.scaled(16, 16, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+	}
+
+	m_exportButton->setEnabled(true);
+	// Switch to Export view if view switcher is visible
+	if (m_viewSwitcher->isVisible()) {
+		m_exportViewButton->setChecked(true);
+		m_entitiesViewButton->setChecked(false);
+		m_stackedWidget->setCurrentIndex(0);
+	}
 }
 
-void IconPreview::clearExtractList() {
-	m_extractNames.clear();
-	m_extractListWidget->clear();
-
-	// Hide the extract list UI, show spacer
-	m_extractListLabel->setVisible(false);
-	m_extractListWidget->setVisible(false);
-	m_clearExtractButton->setVisible(false);
-	m_extractButton->setEnabled(false);
-	m_spacer->setVisible(true);
+void IconPreview::clearExportList() {
+	m_exportList.clear();
+	m_exportListWidget->clear();
+	m_exportButton->setEnabled(false);
 }
 
-QStringList IconPreview::extractList() const {
-	return m_extractNames;
+QList<ExportIconInfo> IconPreview::exportList() const {
+	return m_exportList;
 }
 
 void IconPreview::clear() {
@@ -491,12 +583,125 @@ void IconPreview::clear() {
 	m_aliasesLabel->clear();
 	m_aliasesLabel->setVisible(false);
 	m_currentSvg.clear();
+	m_currentName.clear();
+	m_currentStyle.clear();
+	m_currentSize = 0;
+	m_currentAliases.clear();
 	m_currentPixmap = QPixmap();
 
 	m_copySvgButton->setEnabled(false);
 	m_copyPngButton->setEnabled(false);
-	m_extractButton->setEnabled(!m_extractNames.isEmpty());
-	m_exportButton->setEnabled(false);
+	m_copyInfoButton->setEnabled(false);
+	m_exportButton->setEnabled(!m_exportList.isEmpty());
+
+	// Clear entities and show direct export view
+	m_entities.clear();
+	m_entitiesTable->setRowCount(0);
+	m_viewSwitcher->setVisible(false);
+	m_exportWidget->setParent(this);
+	// Re-insert export widget into main layout
+	QVBoxLayout *mainLayout = qobject_cast<QVBoxLayout*>(layout());
+	if (mainLayout && mainLayout->indexOf(m_exportWidget) < 0) {
+		int switcherIndex = mainLayout->indexOf(m_viewSwitcher);
+		if (switcherIndex >= 0) {
+			mainLayout->insertWidget(switcherIndex, m_exportWidget, 1);
+		}
+	}
+	m_exportWidget->setVisible(true);
+}
+
+void IconPreview::setBitmapMode(bool isBitmap) {
+	// Hide Copy SVG button for bitmap collections
+	m_copySvgButton->setVisible(!isBitmap);
+	// In bitmap mode, entities are not supported, so always show direct export view
+	if (isBitmap) {
+		m_viewSwitcher->setVisible(false);
+		m_exportWidget->setParent(this);
+		QVBoxLayout *mainLayout = qobject_cast<QVBoxLayout*>(layout());
+		if (mainLayout && mainLayout->indexOf(m_exportWidget) < 0) {
+			int switcherIndex = mainLayout->indexOf(m_viewSwitcher);
+			if (switcherIndex >= 0) {
+				mainLayout->insertWidget(switcherIndex, m_exportWidget, 1);
+			}
+		}
+		m_exportWidget->setVisible(true);
+	}
+}
+
+void IconPreview::setEntities(const EntityMap &entities) {
+	m_entities = entities;
+	updateEntitiesTable();
+
+	bool hasEntities = !entities.isEmpty();
+
+	if (hasEntities) {
+		// Show view switcher with Export and Entities buttons
+		// Move export widget into stacked widget
+		m_exportWidget->setParent(m_stackedWidget);
+		m_stackedWidget->insertWidget(0, m_exportWidget);
+		m_exportWidget->setVisible(true);
+
+		// Select Export view by default
+		m_exportViewButton->setChecked(true);
+		m_entitiesViewButton->setChecked(false);
+		m_stackedWidget->setCurrentIndex(0);
+		m_viewSwitcher->setVisible(true);
+	} else {
+		// Show direct export view (no view switcher)
+		m_viewSwitcher->setVisible(false);
+
+		// Reparent export widget back to main widget
+		m_exportWidget->setParent(this);
+		QVBoxLayout *mainLayout = qobject_cast<QVBoxLayout*>(layout());
+		if (mainLayout && mainLayout->indexOf(m_exportWidget) < 0) {
+			int switcherIndex = mainLayout->indexOf(m_viewSwitcher);
+			if (switcherIndex >= 0) {
+				mainLayout->insertWidget(switcherIndex, m_exportWidget, 1);
+			}
+		}
+		m_exportWidget->setVisible(true);
+	}
+}
+
+EntityMap IconPreview::currentEntities() const {
+	return m_entities;
+}
+
+bool IconPreview::hasEntities() const {
+	return !m_entities.isEmpty();
+}
+
+void IconPreview::updateEntitiesTable() {
+	m_entitiesTable->blockSignals(true);
+	m_entitiesTable->setRowCount(m_entities.size());
+
+	int row = 0;
+	for (auto it = m_entities.begin(); it != m_entities.end(); ++it, ++row) {
+		// Name column (read-only)
+		auto *nameItem = new QTableWidgetItem(it.key());
+		nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEditable);
+		m_entitiesTable->setItem(row, 0, nameItem);
+
+		// Value column (editable)
+		auto *valueItem = new QTableWidgetItem(it.value());
+		m_entitiesTable->setItem(row, 1, valueItem);
+	}
+
+	m_entitiesTable->resizeColumnsToContents();
+	m_entitiesTable->blockSignals(false);
+}
+
+void IconPreview::onEntityValueChanged(int row, int column) {
+	if (column != 1)  // Only value column is editable
+		return;
+
+	QString name = m_entitiesTable->item(row, 0)->text();
+	QString value = m_entitiesTable->item(row, 1)->text();
+
+	if (m_entities.contains(name) && m_entities[name] != value) {
+		m_entities[name] = value;
+		emit entitiesChanged(m_entities);
+	}
 }
 
 // ============================================================================
@@ -551,8 +756,8 @@ IconGrid::IconGrid(QWidget *parent)
 
 	// Context menu
 	m_contextMenu = new QMenu(this);
-	m_addToExtractAction = m_contextMenu->addAction(tr("Add to List"));
-	connect(m_addToExtractAction, &QAction::triggered, this, &IconGrid::onAddToExtract);
+	m_addToExportAction = m_contextMenu->addAction(tr("Add to List"));
+	connect(m_addToExportAction, &QAction::triggered, this, &IconGrid::onAddToExport);
 
 	m_listView->setContextMenuPolicy(Qt::CustomContextMenu);
 
@@ -567,6 +772,21 @@ IconGrid::IconGrid(QWidget *parent)
 			this, &IconGrid::onSelectionChanged);
 	connect(m_listView, &QListView::doubleClicked, this, &IconGrid::onDoubleClicked);
 	connect(m_listView, &QListView::customContextMenuRequested, this, &IconGrid::onContextMenu);
+
+	// Entity editing
+	connect(m_preview, &IconPreview::entitiesChanged, this, [this](const EntityMap &entities) {
+		QModelIndex current = m_listView->currentIndex();
+		if (current.isValid()) {
+			int actualIndex = current.data(IconIndexRole).toInt();
+			m_model->setIconEntities(actualIndex, entities);
+			// Refresh the preview with new pixmap
+			QPixmap largePixmap = m_model->getIconPixmap(actualIndex);
+			QString name = current.data(IconNameRole).toString();
+			QString svg = m_model->getIconSvg(actualIndex);
+			m_preview->setIcon(largePixmap, name, svg, m_toolBar->currentStyle(),
+							   m_model->iconSize(), m_model->getIconAliases(actualIndex));
+		}
+	});
 
 }
 
@@ -583,6 +803,10 @@ IconModel *IconGrid::model() const {
 
 IconPreview *IconGrid::preview() const {
 	return m_preview;
+}
+
+IconToolBar *IconGrid::toolBar() const {
+	return m_toolBar;
 }
 
 void IconGrid::setIconSize(int size) {
@@ -626,7 +850,13 @@ void IconGrid::onSelectionChanged(const QModelIndex &current, const QModelIndex 
 	// Get aliases for bitmap icons
 	QStringList aliases = m_model->getIconAliases(actualIndex);
 
-	m_preview->setIcon(largePixmap, name, svg, aliases);
+	QString style = m_toolBar->currentStyle();
+	int size = m_model->iconSize();
+	m_preview->setIcon(largePixmap, name, svg, style, size, aliases);
+
+	// Set entities if any
+	EntityMap entities = m_model->getIconEntities(actualIndex);
+	m_preview->setEntities(entities);
 
 	emit iconSelected(actualIndex, name);
 }
@@ -635,10 +865,8 @@ void IconGrid::onDoubleClicked(const QModelIndex &index) {
 	if (!index.isValid())
 		return;
 
-	int actualIndex = index.data(IconIndexRole).toInt();
-	QString name = index.data(IconNameRole).toString();
-
-	emit iconDoubleClicked(actualIndex, name);
+	// Double-click adds to export list
+	addCurrentToExportList();
 }
 
 void IconGrid::onContextMenu(const QPoint &pos) {
@@ -649,15 +877,24 @@ void IconGrid::onContextMenu(const QPoint &pos) {
 	m_contextMenu->exec(m_listView->viewport()->mapToGlobal(pos));
 }
 
-void IconGrid::onAddToExtract() {
+void IconGrid::onAddToExport() {
+	addCurrentToExportList();
+}
+
+void IconGrid::addCurrentToExportList() {
 	QModelIndex current = m_listView->currentIndex();
 	if (!current.isValid())
 		return;
 
-	QString name = current.data(IconNameRole).toString();
-	int actualIndex = current.data(IconIndexRole).toInt();
-	QPixmap pixmap = m_model->getIconPixmap(actualIndex);
+	ExportIconInfo info;
+	info.name = current.data(IconNameRole).toString();
+	info.svg = current.data(IconSvgRole).toString();
 
-	m_preview->addToExtractList(name, pixmap);
+	int actualIndex = current.data(IconIndexRole).toInt();
+	info.pixmap = m_model->getIconPixmap(actualIndex);
+	info.style = m_toolBar->currentStyle();
+	info.size = m_model->iconSize();
+
+	m_preview->addToExportList(info);
 }
 

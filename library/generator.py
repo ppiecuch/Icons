@@ -380,17 +380,83 @@ def scan_for_svg_files(icon_folder):
     for root, dirs, files in os.walk(icon_folder):
         for file in files:
             if file.endswith(".svg"):
-                svg_files.append(os.path.join(root, file))
+                full_path = os.path.join(root, file)
+                # Skip symlinks - they are aliases to other icons
+                if os.path.islink(full_path):
+                    continue
+                svg_files.append(full_path)
     return svg_files
 
 
-def extract_svg_content(svg_file):
+def extract_svg_content(svg_file, expected_size=None):
     with open(svg_file, 'r') as file:
         content = file.read()
+    # Remove XML declaration if present
+    content = re.sub(r'<\?xml[^?]*\?>', '', content)
+
+    # Parse entity definitions from DOCTYPE but keep entity references in content
+    # Match DOCTYPE with internal subset: <!DOCTYPE svg ... [ ... ]>
+    entities = {}
+    doctype_match = re.search(r'<!DOCTYPE[^>]*\[(.*?)\]>', content, flags=re.DOTALL)
+    if doctype_match:
+        internal_subset = doctype_match.group(1)
+        # Extract entity definitions: <!ENTITY name "value">
+        for entity_match in re.finditer(r'<!ENTITY\s+(\w+)\s+"([^"]*)">', internal_subset):
+            entities[entity_match.group(1)] = entity_match.group(2)
+        # Remove the DOCTYPE declaration
+        content = re.sub(r'<!DOCTYPE[^>]*\[.*?\]>', '', content, flags=re.DOTALL)
+
+    # Remove simple DOCTYPE (without internal subset)
+    content = re.sub(r'<!DOCTYPE[^>]*>', '', content)
+    # Remove XML/HTML comments
+    content = re.sub(r'<!--.*?-->', '', content, flags=re.DOTALL)
+    # Remove Adobe-specific namespace elements (a:midPointStop, etc.)
+    content = re.sub(r'<a:[^>]*/?>', '', content, flags=re.DOTALL)
+    content = re.sub(r'<a:[^>]*>.*?</a:[^>]*>', '', content, flags=re.DOTALL)
+
+    # Extract original size from viewBox or width/height if it differs from expected size
+    original_size = None
+    svg_tag_match = re.search(r'<svg[^>]*>', content)
+    if svg_tag_match and expected_size:
+        svg_tag = svg_tag_match.group(0)
+        # Try viewBox first
+        viewbox_match = re.search(r'viewBox\s*=\s*"([^"]*)"', svg_tag)
+        if viewbox_match:
+            parts = viewbox_match.group(1).split()
+            if len(parts) == 4:
+                try:
+                    vb_width = float(parts[2])
+                    if vb_width != expected_size:
+                        original_size = vb_width
+                except ValueError:
+                    pass
+        # If no viewBox, try width attribute
+        if original_size is None:
+            width_match = re.search(r'\bwidth\s*=\s*"(\d+(?:\.\d+)?)"', svg_tag)
+            if width_match:
+                try:
+                    width = float(width_match.group(1))
+                    if width != expected_size:
+                        original_size = width
+                except ValueError:
+                    pass
+
     # Remove the <svg tag and extract the content
     content = re.sub(r'<svg[^>]*>', '', content)
     content = re.sub(r'</svg>', '', content)
-    return content.strip()
+
+    # If original size differs from expected, wrap content in a scaled group
+    if original_size and expected_size:
+        scale = expected_size / original_size
+        content = f'<g transform="scale({scale})">{content.strip()}</g>'
+
+    # Prepend entities as JSON header if any were found
+    content = content.strip()
+    if entities:
+        entities_json = json.dumps(entities, separators=(',', ':'))
+        content = f'<!-- ENTITIES:{entities_json} -->\n{content}'
+
+    return content
 
 
 def save_output(var: str, output_file_base: str, svg_contents, svg_basenames):
@@ -444,7 +510,7 @@ def main_bootstrap():
 
             # Sort files alphabetically for consistent ordering
             svg_files.sort(key=lambda f: os.path.basename(f).lower())
-            svg_contents = [extract_svg_content(svg_file) for svg_file in svg_files]
+            svg_contents = [extract_svg_content(svg_file, expected_size=size) for svg_file in svg_files]
             svg_basenames = [os.path.splitext(os.path.basename(svg_file))[0] for svg_file in svg_files]
             output_var_base = get_output_var_base(library, style=style, size=size)
             output_file_base = get_output_file_base(library, style=style, size=size)
@@ -476,7 +542,7 @@ def main_tabler():
             svg_files = scan_for_svg_files(icon_folder)
             # Sort files alphabetically for consistent ordering
             svg_files.sort(key=lambda f: os.path.basename(f).lower())
-            svg_contents = [extract_svg_content(svg_file) for svg_file in svg_files]
+            svg_contents = [extract_svg_content(svg_file, expected_size=size) for svg_file in svg_files]
             svg_basenames = [os.path.splitext(os.path.basename(svg_file))[0] for svg_file in svg_files]
             meta['output'].extend(save_output(output_var_base, output_file_base, svg_contents, svg_basenames))
 
@@ -551,7 +617,7 @@ def main_fluent():
 
                 output_file_base = get_output_file_base(library, style=style.lower(), size=size)
                 output_var_base = get_output_var_base(library, style=style.lower(), size=size)
-                svg_contents = [extract_svg_content(svg_file) for svg_file in svg_files]
+                svg_contents = [extract_svg_content(svg_file, expected_size=size) for svg_file in svg_files]
                 meta['output'].extend(save_output(output_var_base, output_file_base, svg_contents, svg_basenames))
 
                 # Generate header file for this size/style combination
@@ -589,7 +655,7 @@ def main_breeze():
                     svg_files = scan_for_svg_files(icon_folder)
                     # Sort files alphabetically for consistent ordering
                     svg_files.sort(key=lambda f: os.path.basename(f).lower())
-                    svg_contents = [extract_svg_content(svg_file) for svg_file in svg_files]
+                    svg_contents = [extract_svg_content(svg_file, expected_size=size) for svg_file in svg_files]
                     svg_basenames = [os.path.splitext(os.path.basename(svg_file))[0] for svg_file in svg_files]
                     meta['output'].extend(save_output(output_var_base, output_file_base, svg_contents, svg_basenames))
 

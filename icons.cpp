@@ -91,7 +91,6 @@ void MainWindow::setupConnections() {
 
 	// Icon grid signals
 	connect(m_ui->iconGrid, &IconGrid::iconSelected, this, &MainWindow::onIconSelected);
-	connect(m_ui->iconGrid, &IconGrid::iconDoubleClicked, this, &MainWindow::onIconDoubleClicked);
 
 	// Connect model signals for icon count updates
 	connect(m_ui->iconGrid->model(), &IconModel::iconListChanged, this, &MainWindow::updateIconCount);
@@ -290,11 +289,15 @@ void MainWindow::loadCurrentCollection() {
 }
 
 void MainWindow::updateAvailableStyles() {
-	auto *toolbar = m_ui->iconGrid->findChild<IconToolBar*>();
+	auto *toolbar = m_ui->iconGrid->toolBar();
 	if (!toolbar)
 		return;
 
 	auto &registry = IconCollectionRegistry::instance();
+
+	// Update bitmap mode for toolbar and preview
+	toolbar->setBitmapMode(m_isBitmapCollection);
+	m_ui->iconGrid->preview()->setBitmapMode(m_isBitmapCollection);
 
 	if (m_isBitmapCollection) {
 		// Bitmap collections have Color/Grayscale styles

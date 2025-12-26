@@ -82,6 +82,12 @@ public:
 	QString getIconName(int index) const;
 	QStringList getIconAliases(int index) const;
 
+	// Entity support
+	EntityMap getIconEntities(int index) const;
+	bool iconHasEntities(int index) const;
+	void setIconEntities(int index, const EntityMap &entities);
+	EntityMap currentEntities(int index) const;
+
 public slots:
 	void refresh();
 	void clearCache();
@@ -105,6 +111,7 @@ private:
 	bool m_grayscale = false;
 
 	mutable QCache<int, QPixmap> m_pixmapCache;
+	mutable QMap<int, EntityMap> m_customEntities;  // Custom entity values per icon
 };
 
 // TwoTone icon list - combines outline and filled lists

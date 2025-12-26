@@ -188,8 +188,15 @@ QPixmap IconModel::getIconPixmap(int index) const {
 QString IconModel::getIconSvg(int index) const {
 	if (!m_iconList || index < 0 || index >= static_cast<int>(m_allIcons.size()))
 		return QString();
-	if (auto *svg = svgIconList())
-		return svg->getSource(index);
+	if (auto *svg = svgIconList()) {
+		QString source = svg->getSource(index);
+		// Resolve entities if present
+		EntityMap entities = currentEntities(index);
+		if (!entities.isEmpty()) {
+			source = SVGIconList::resolveEntities(source, entities);
+		}
+		return source;
+	}
 	return QString(); // No SVG for bitmap icons
 }
 
@@ -205,6 +212,31 @@ QStringList IconModel::getIconAliases(int index) const {
 	if (auto *bitmap = bitmapIconList())
 		return bitmap->getAliases(index);
 	return QStringList(); // No aliases for SVG icons
+}
+
+EntityMap IconModel::getIconEntities(int index) const {
+	if (!m_iconList || index < 0 || index >= static_cast<int>(m_allIcons.size()))
+		return EntityMap();
+	if (auto *svg = svgIconList())
+		return svg->getEntities(index);
+	return EntityMap();
+}
+
+bool IconModel::iconHasEntities(int index) const {
+	return !getIconEntities(index).isEmpty();
+}
+
+void IconModel::setIconEntities(int index, const EntityMap &entities) {
+	if (index < 0 || index >= static_cast<int>(m_allIcons.size()))
+		return;
+	m_customEntities[index] = entities;
+	m_pixmapCache.remove(index);  // Force re-render
+}
+
+EntityMap IconModel::currentEntities(int index) const {
+	if (m_customEntities.contains(index))
+		return m_customEntities[index];
+	return getIconEntities(index);
 }
 
 void IconModel::refresh() {
@@ -239,6 +271,12 @@ QPixmap IconModel::renderIcon(int index) const {
 		QString svgSource = svg->getSource(actualIndex);
 		if (svgSource.isEmpty())
 			return QPixmap();
+
+		// Resolve entities if present
+		EntityMap entities = currentEntities(index);
+		if (!entities.isEmpty()) {
+			svgSource = SVGIconList::resolveEntities(svgSource, entities);
+		}
 
 		QSvgRenderer renderer(svgSource.toUtf8());
 		if (!renderer.isValid())
