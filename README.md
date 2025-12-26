@@ -1,19 +1,22 @@
-# ![Logo](promo/logo.png) SVG Icon Viewer
+# ![Logo](promo/logo.png) Icon Viewer
 
-A Qt-based desktop application for browsing, previewing, and exporting SVG icons from multiple open-source icon collections.
+A Qt-based desktop application for browsing, previewing, and exporting icons from multiple open-source icon collections. Supports both SVG vector icons and PNG bitmap icons.
 
 # ![App](promo/app.png)
 
 ## Features
 
-- Browse 10,000+ icons from Bootstrap, Tabler, Fluent UI, and Breeze collections
+- Browse 15,000+ icons from Bootstrap, Tabler, Fluent UI, Breeze, Oxygen, and Oxygen5 collections
 - Real-time search filtering
-- Customizable fill and background colors
+- Customizable fill and background colors (SVG icons)
 - Copy to clipboard (SVG or PNG)
 - Export to file (SVG or PNG)
 - Multiple icon size options
+- Support for both SVG vector and PNG bitmap icon formats
 
 ## Supported Icon Libraries
+
+### SVG Icons
 
 | Library | Icons | Sizes | Styles | Source |
 |---------|-------|-------|--------|--------|
@@ -21,6 +24,13 @@ A Qt-based desktop application for browsing, previewing, and exporting SVG icons
 | Tabler | ~5,000 | 24px | Outline, Filled | [tabler/tabler-icons](https://github.com/tabler/tabler-icons) |
 | Fluent UI | ~4,000 | 10-48px | Regular, Filled | [microsoft/fluentui-system-icons](https://github.com/microsoft/fluentui-system-icons) |
 | Breeze | ~700 | 12-64px | By category | [KDE/breeze-icons](https://github.com/KDE/breeze-icons) |
+
+### Bitmap Icons (PNG)
+
+| Library | Icons | Sizes | Source |
+|---------|-------|-------|--------|
+| Oxygen | ~2,500 | 16-256px | [ArtifexSoftware/ArtifexSoftware.github.io](https://github.com/ArtifexSoftware/ArtifexSoftware.github.io) |
+| Oxygen5 | ~2,500 | 16-256px | [ArtifexSoftware/ArtifexSoftware.github.io](https://github.com/ArtifexSoftware/ArtifexSoftware.github.io) |
 
 ## Build
 
