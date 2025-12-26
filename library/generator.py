@@ -48,8 +48,9 @@ public:
         QString sColor;
         if (m_fillColor != clNone)
             sColor = QString(" fill=\\"%1\\"").arg(m_fillColor.name());
-        return QString("<svg viewBox=\\"0 0 {size} {size}\\" xmlns=\\"http://www.w3.org/2000/svg\\">")
-            + getBody(index).replace(" fill=\\"#212121\\"", sColor)
+        return QString("<svg viewBox=\\"0 0 {size} {size}\\" xmlns=\\"http://www.w3.org/2000/svg\\"%1>")
+            .arg(sColor)
+            + getBody(index)
             + QString("</svg>");
     }}
 

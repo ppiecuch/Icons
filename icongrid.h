@@ -89,9 +89,12 @@ public:
 	QString currentStyle() const;
 
 	QColor fillColor() const;
+	QColor toneColor() const;
 	QColor backgroundColor() const;
 
 	int iconSize() const;
+
+	void setTwoToneMode(bool enabled);
 
 	void setBitmapSizes(const QList<int> &sizes);
 	int currentBitmapSize() const;
@@ -101,6 +104,7 @@ public:
 signals:
 	void collectionChanged(const QString &name);
 	void fillColorChanged(const QColor &color);
+	void toneColorChanged(const QColor &color);
 	void backgroundColorChanged(const QColor &color);
 	void iconSizeChanged(int size);
 	void styleChanged(const QString &style);
@@ -108,16 +112,19 @@ signals:
 
 public slots:
 	void setFillColor(const QColor &color);
+	void setToneColor(const QColor &color);
 	void setBackgroundColor(const QColor &color);
 
 private slots:
 	void onFillColorClicked();
+	void onToneColorClicked();
 	void onBackgroundColorClicked();
 	void onIconSizeChanged(int index);
 	void onBitmapSizeChanged(int index);
 
 private:
 	void updateFillColorButton();
+	void updateToneColorButton();
 	void updateBgColorButton();
 
 	QComboBox *m_collectionCombo;
@@ -127,8 +134,10 @@ private:
 	QComboBox *m_bitmapSizeCombo;
 	QLabel *m_bitmapSizeLabel;
 	QToolButton *m_fillColorButton;
+	QToolButton *m_toneColorButton;
 	QToolButton *m_bgColorButton;
 	QColor m_fillColor = Qt::black;
+	QColor m_toneColor = QColor(200, 200, 200);
 	QColor m_backgroundColor = Qt::transparent;
 };
 
@@ -224,6 +233,7 @@ signals:
 public slots:
 	void setFilter(const QString &filter);
 	void setFillColor(const QColor &color);
+	void setToneColor(const QColor &color);
 	void setBackgroundColor(const QColor &color);
 
 private slots:

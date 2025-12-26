@@ -168,6 +168,13 @@ IconToolBar::IconToolBar(QWidget *parent)
 	m_fillColorButton->setToolTip(tr("Set fill color"));
 	updateFillColorButton();
 
+	// Tone color button (for TwoTone mode)
+	m_toneColorButton = new QToolButton(this);
+	m_toneColorButton->setText(tr("Tone"));
+	m_toneColorButton->setToolTip(tr("Set tone color (secondary color for two-tone icons)"));
+	m_toneColorButton->setVisible(false);  // Hidden by default, shown in TwoTone mode
+	updateToneColorButton();
+
 	// Background color button
 	m_bgColorButton = new QToolButton(this);
 	m_bgColorButton->setText(tr("BG"));
@@ -186,6 +193,7 @@ IconToolBar::IconToolBar(QWidget *parent)
 	layout->addWidget(m_bitmapSizeCombo);
 	layout->addStretch();
 	layout->addWidget(m_fillColorButton);
+	layout->addWidget(m_toneColorButton);
 	layout->addWidget(m_bgColorButton);
 
 	// Connections
@@ -199,6 +207,8 @@ IconToolBar::IconToolBar(QWidget *parent)
 			this, &IconToolBar::onBitmapSizeChanged);
 	connect(m_fillColorButton, &QToolButton::clicked,
 			this, &IconToolBar::onFillColorClicked);
+	connect(m_toneColorButton, &QToolButton::clicked,
+			this, &IconToolBar::onToneColorClicked);
 	connect(m_bgColorButton, &QToolButton::clicked,
 			this, &IconToolBar::onBackgroundColorClicked);
 }
@@ -229,6 +239,10 @@ QColor IconToolBar::fillColor() const {
 	return m_fillColor;
 }
 
+QColor IconToolBar::toneColor() const {
+	return m_toneColor;
+}
+
 QColor IconToolBar::backgroundColor() const {
 	return m_backgroundColor;
 }
@@ -242,9 +256,18 @@ void IconToolBar::setFillColor(const QColor &color) {
 	updateFillColorButton();
 }
 
+void IconToolBar::setToneColor(const QColor &color) {
+	m_toneColor = color;
+	updateToneColorButton();
+}
+
 void IconToolBar::setBackgroundColor(const QColor &color) {
 	m_backgroundColor = color;
 	updateBgColorButton();
+}
+
+void IconToolBar::setTwoToneMode(bool enabled) {
+	m_toneColorButton->setVisible(enabled);
 }
 
 void IconToolBar::onFillColorClicked() {
@@ -253,6 +276,15 @@ void IconToolBar::onFillColorClicked() {
 		m_fillColor = color;
 		updateFillColorButton();
 		emit fillColorChanged(color);
+	}
+}
+
+void IconToolBar::onToneColorClicked() {
+	QColor color = QColorDialog::getColor(m_toneColor, this, tr("Select Tone Color"));
+	if (color.isValid()) {
+		m_toneColor = color;
+		updateToneColorButton();
+		emit toneColorChanged(color);
 	}
 }
 
@@ -307,6 +339,12 @@ void IconToolBar::updateFillColorButton() {
 	QPixmap pixmap(16, 16);
 	pixmap.fill(m_fillColor);
 	m_fillColorButton->setIcon(QIcon(pixmap));
+}
+
+void IconToolBar::updateToneColorButton() {
+	QPixmap pixmap(16, 16);
+	pixmap.fill(m_toneColor);
+	m_toneColorButton->setIcon(QIcon(pixmap));
 }
 
 void IconToolBar::updateBgColorButton() {
@@ -774,6 +812,7 @@ IconGrid::IconGrid(QWidget *parent)
 	connect(m_searchBar, &SearchBar::textChanged, this, &IconGrid::setFilter);
 
 	connect(m_toolBar, &IconToolBar::fillColorChanged, this, &IconGrid::setFillColor);
+	connect(m_toolBar, &IconToolBar::toneColorChanged, this, &IconGrid::setToneColor);
 	connect(m_toolBar, &IconToolBar::backgroundColorChanged, this, &IconGrid::setBackgroundColor);
 	connect(m_toolBar, &IconToolBar::iconSizeChanged, this, &IconGrid::setIconSize);
 
@@ -788,8 +827,8 @@ IconGrid::IconGrid(QWidget *parent)
 		if (current.isValid()) {
 			int actualIndex = current.data(IconIndexRole).toInt();
 			m_model->setIconEntities(actualIndex, entities);
-			// Refresh the preview with new pixmap
-			QPixmap largePixmap = m_model->getIconPixmap(actualIndex);
+			// Refresh the preview with new pixmap at high resolution
+			QPixmap largePixmap = m_model->getIconPixmapAtSize(actualIndex, 120);
 			QString name = current.data(IconNameRole).toString();
 			QString svg = m_model->getIconSvg(actualIndex);
 			QStringList tags = m_model->getIconTags(actualIndex);
@@ -839,6 +878,10 @@ void IconGrid::setFillColor(const QColor &color) {
 	m_model->setFillColor(color);
 }
 
+void IconGrid::setToneColor(const QColor &color) {
+	m_model->setToneColor(color);
+}
+
 void IconGrid::setBackgroundColor(const QColor &color) {
 	m_model->setBackgroundColor(color);
 }
@@ -853,11 +896,10 @@ void IconGrid::onSelectionChanged(const QModelIndex &current, const QModelIndex 
 
 	QString name = current.data(IconNameRole).toString();
 	QString svg = current.data(IconSvgRole).toString();
-	QPixmap pixmap = current.data(Qt::DecorationRole).value<QPixmap>();
 
-	// Render at larger size for preview
+	// Render at larger size for preview (120px for 128px label)
 	int actualIndex = current.data(IconIndexRole).toInt();
-	QPixmap largePixmap = m_model->getIconPixmap(actualIndex);
+	QPixmap largePixmap = m_model->getIconPixmapAtSize(actualIndex, 120);
 
 	// Get aliases for bitmap icons
 	QStringList aliases = m_model->getIconAliases(actualIndex);

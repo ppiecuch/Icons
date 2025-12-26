@@ -386,6 +386,12 @@ void MainWindow::onStyleChanged(const QString &styleName) {
 		// Handle SVG styles
 		m_currentStyle = stringToIconStyle(styleName);
 		loadCurrentCollection();
+
+		// Show/hide tone color button for TwoTone mode
+		auto *toolbar = m_ui->iconGrid->toolBar();
+		if (toolbar) {
+			toolbar->setTwoToneMode(m_currentStyle == IconStyle::TwoTone);
+		}
 	}
 }
 
@@ -499,18 +505,42 @@ void MainWindow::onExport() {
 }
 
 void MainWindow::onAbout() {
-	QMessageBox::about(this, tr("About Icon Viewer"),
-		tr("<h3>Icon Viewer</h3>"
-		   "<p>Version 1.0</p>"
-		   "<p>A viewer for icon collections including:</p>"
-		   "<ul>"
-		   "<li>Bootstrap Icons (SVG)</li>"
-		   "<li>Tabler Icons (SVG)</li>"
-		   "<li>Microsoft Fluent UI Icons (SVG)</li>"
-		   "<li>KDE Breeze Icons (SVG)</li>"
-		   "<li>KDE Oxygen Icons (Bitmap)</li>"
-		   "</ul>"
-		   "<p>Based on <a href='https://github.com/skamradt/SVGIconViewer'>SVGIconViewer</a></p>"));
+	QMessageBox aboutBox(this);
+	aboutBox.setWindowTitle(tr("About Icon Viewer"));
+	aboutBox.setTextFormat(Qt::RichText);
+	aboutBox.setText(
+		tr("<p><span style='font-size:18pt; font-weight:600;'>Icon Viewer</span><br/>"
+		   "<span style='font-size:10pt; font-style:italic;'>Browse, preview, and export icons from popular icon libraries.</span></p>"));
+
+	aboutBox.setInformativeText(
+		tr("<p><b>Supported Icon Libraries:</b></p>"
+		   "<p><b>SVG Icons:</b><br/>"
+		   "&bull; <a href='https://icons.getbootstrap.com/'>Bootstrap Icons</a> - Open source icon set<br/>"
+		   "&bull; <a href='https://tabler.io/icons'>Tabler Icons</a> - Over 5000 free icons<br/>"
+		   "&bull; <a href='https://github.com/microsoft/fluentui-system-icons'>Fluent UI Icons</a> - Microsoft's icon system<br/>"
+		   "&bull; <a href='https://develop.kde.org/frameworks/breeze-icons/'>Breeze Icons</a> - KDE's icon theme</p>"
+		   "<p><b>Bitmap Icons (PNG):</b><br/>"
+		   "&bull; <a href='https://techbase.kde.org/Projects/Oxygen/Licensing'>Oxygen Icons</a> - Classic KDE icon theme<br/>"
+		   "&bull; <a href='https://invent.kde.org/frameworks/oxygen-icons'>Oxygen5 Icons</a> - Updated Oxygen icons</p>"
+		   "<hr/>"
+		   "<p><b>Written with:</b><br/>"
+		   "&bull; <a href='https://qt.io'>Qt</a> - Cross-platform application framework</p>"
+		   "<p><b>Author:</b> Pawel Piecuch<br/>"
+		   "<b>Copyright</b> &copy; 2024, <i>Komsoft Oprogramowanie</i></p>"
+		   "<hr/>"
+		   "<p><i>If you like this application, you can support my work and further development:</i><br/>"
+		   "<a href='https://www.paypal.com/donate?business=6QXS8MBPKBTTN&item_name=Icon%20Viewer&currency_code=USD'>Donate with PayPal</a></p>"
+		   "<hr/>"
+		   "<p style='font-size:10pt;'><b>Version:</b> %1<br/>"
+		   "<b>Qt Version:</b> %2<br/>"
+		   "<b>Build:</b> %3 %4</p>")
+		.arg(qApp->applicationVersion())
+		.arg(qVersion())
+		.arg(__DATE__)
+		.arg(__TIME__));
+
+	aboutBox.setStandardButtons(QMessageBox::Ok);
+	aboutBox.exec();
 }
 
 void MainWindow::setSmallIcons() {

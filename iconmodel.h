@@ -65,6 +65,10 @@ public:
 	void setFillColor(const QColor &color);
 	QColor fillColor() const;
 
+	void setToneColor(const QColor &color);
+	QColor toneColor() const;
+	bool isTwoTone() const;
+
 	void setBackgroundColor(const QColor &color);
 	QColor backgroundColor() const;
 
@@ -78,6 +82,7 @@ public:
 
 	// Get icon at index
 	QPixmap getIconPixmap(int index) const;
+	QPixmap getIconPixmapAtSize(int index, int size) const;
 	QString getIconSvg(int index) const;
 	QString getIconName(int index) const;
 	QStringList getIconAliases(int index) const;
@@ -109,6 +114,7 @@ private:
 
 	int m_iconSize = 32;
 	QColor m_fillColor = clNone;
+	QColor m_toneColor = QColor(200, 200, 200);
 	QColor m_backgroundColor = Qt::transparent;
 	bool m_grayscale = false;
 
@@ -116,50 +122,111 @@ private:
 	mutable QMap<int, EntityMap> m_customEntities;  // Custom entity values per icon
 };
 
-// TwoTone icon list - combines outline and filled lists
-class TwoToneIconList : public SVGIconList {
+// TwoTone icon list - combines outline and filled lists with name-based mapping
+class TwoToneIconList : public SVGTwoToneIconList {
 	std::unique_ptr<SVGIconList> m_filled;
 	std::unique_ptr<SVGIconList> m_outline;
-	QColor m_fillColor = clNone;
-	QColor m_secondaryColor = QColor(200, 200, 200);
+	QColor m_fillColor = Qt::black;
+	QColor m_toneColor = QColor(200, 200, 200);
+
+	// Mapping: index in this list -> {outlineIdx, filledIdx}
+	struct IconMapping {
+		int outlineIdx;
+		int filledIdx;  // -1 if no filled version exists
+	};
+	std::vector<IconMapping> m_mapping;
+	QMap<QString, int> m_filledNameToIdx;
+
+	void buildMapping() {
+		// Build name->index map for filled icons
+		m_filledNameToIdx.clear();
+		for (int i = 0; i < m_filled->getCount(); ++i) {
+			QString name = m_filled->getName(i);
+			// Remove "-fill" suffix if present for matching
+			if (name.endsWith("-fill"))
+				name = name.left(name.length() - 5);
+			m_filledNameToIdx[name.toLower()] = i;
+		}
+
+		// Build mapping for outline icons that have filled counterparts
+		m_mapping.clear();
+		for (int i = 0; i < m_outline->getCount(); ++i) {
+			QString outlineName = m_outline->getName(i).toLower();
+			auto it = m_filledNameToIdx.find(outlineName);
+			if (it != m_filledNameToIdx.end()) {
+				m_mapping.push_back({i, it.value()});
+			}
+		}
+	}
 
 public:
 	TwoToneIconList(SVGIconList *filled, SVGIconList *outline)
-		: m_filled(filled), m_outline(outline) {}
+		: m_filled(filled), m_outline(outline) {
+		// Set initial colors on sub-lists
+		m_outline->setFillColor(m_fillColor);
+		m_filled->setFillColor(m_toneColor);
+		// Build name-based mapping
+		buildMapping();
+	}
 
-	int getCount() const override { return m_filled->getCount(); }
-	QString getName(int index) const override { return m_filled->getName(index); }
+	int getCount() const override { return static_cast<int>(m_mapping.size()); }
+
+	QString getName(int index) const override {
+		if (index < 0 || index >= static_cast<int>(m_mapping.size()))
+			return QString();
+		return m_outline->getName(m_mapping[index].outlineIdx);
+	}
 
 	QString getBody(int index) const override {
-		// Combine filled (background) and outline (foreground)
-		QString body = m_filled->getBody(index);
-		body += m_outline->getBody(index);
+		if (index < 0 || index >= static_cast<int>(m_mapping.size()))
+			return QString();
+		const auto &map = m_mapping[index];
+		QString body = m_filled->getBody(map.filledIdx);
+		body += m_outline->getBody(map.outlineIdx);
 		return body;
 	}
 
 	QString getSource(int index) const override {
-		// TwoTone: filled part uses secondary color, outline uses primary
-		QString filledBody = m_filled->getBody(index);
-		QString outlineBody = m_outline->getBody(index);
+		if (index < 0 || index >= static_cast<int>(m_mapping.size()))
+			return QString();
 
-		// Apply secondary color to filled, primary to outline
-		if (m_secondaryColor.isValid() && m_secondaryColor != clNone)
-			filledBody.replace(" fill=\"#212121\"", QString(" fill=\"%1\"").arg(m_secondaryColor.name()));
-		if (m_fillColor.isValid() && m_fillColor != clNone)
-			outlineBody.replace(" fill=\"#212121\"", QString(" fill=\"%1\"").arg(m_fillColor.name()));
+		const auto &map = m_mapping[index];
 
-		return QString("<svg viewBox=\"0 0 %1 %1\" xmlns=\"http://www.w3.org/2000/svg\">")
-			.arg(m_filled->getBaseSize()) + filledBody + outlineBody + "</svg>";
+		// Get body content (paths) from each list
+		QString filledBody = m_filled->getBody(map.filledIdx);
+		QString outlineBody = m_outline->getBody(map.outlineIdx);
+
+		// Build fill color strings
+		QString toneColorStr = (m_toneColor.isValid() && m_toneColor.alpha() > 0)
+			? m_toneColor.name() : "#c8c8c8";
+		QString fillColorStr = (m_fillColor.isValid() && m_fillColor.alpha() > 0)
+			? m_fillColor.name() : "#000000";
+
+		// Wrap each layer in a group with the appropriate fill color
+		QString filledLayer = QString("<g fill=\"%1\">%2</g>").arg(toneColorStr, filledBody);
+		QString outlineLayer = QString("<g fill=\"%1\">%2</g>").arg(fillColorStr, outlineBody);
+
+		// Combine with SVG wrapper
+		return QString("<svg viewBox=\"0 0 %1 %1\" xmlns=\"http://www.w3.org/2000/svg\">%2%3</svg>")
+			.arg(m_outline->getBaseSize())
+			.arg(filledLayer)
+			.arg(outlineLayer);
 	}
 
 	QColor getFillColor() const override { return m_fillColor; }
-	void setFillColor(QColor value) override { m_fillColor = value; }
+	void setFillColor(QColor value) override {
+		m_fillColor = value;
+		m_outline->setFillColor(value);  // Primary color goes to outline layer
+	}
 
-	QColor getSecondaryColor() const { return m_secondaryColor; }
-	void setSecondaryColor(QColor value) { m_secondaryColor = value; }
+	QColor getToneColor() const override { return m_toneColor; }
+	void setToneColor(QColor value) override {
+		m_toneColor = value;
+		m_filled->setFillColor(value);  // Tone color goes to filled layer
+	}
 
-	QString getLibraryName() const override { return m_filled->getLibraryName() + " TwoTone"; }
-	int getBaseSize() const override { return m_filled->getBaseSize(); }
+	QString getLibraryName() const override { return m_outline->getLibraryName() + " TwoTone"; }
+	int getBaseSize() const override { return m_outline->getBaseSize(); }
 };
 
 // Bitmap style types

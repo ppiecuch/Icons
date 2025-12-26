@@ -73,6 +73,14 @@ void IconModel::setIconList(IconList *list) {
 	m_pixmapCache.clear();
 
 	if (m_iconList) {
+		// Apply current colors to the new list
+		if (auto *svg = dynamic_cast<SVGIconList*>(m_iconList)) {
+			svg->setFillColor(m_fillColor);
+		}
+		if (auto *twoTone = dynamic_cast<SVGTwoToneIconList*>(m_iconList)) {
+			twoTone->setToneColor(m_toneColor);
+		}
+
 		int count = m_iconList->getCount();
 		m_allIcons.reserve(count);
 
@@ -140,6 +148,25 @@ QColor IconModel::fillColor() const {
 	return m_fillColor;
 }
 
+void IconModel::setToneColor(const QColor &color) {
+	if (m_toneColor != color) {
+		m_toneColor = color;
+		if (auto *twoTone = dynamic_cast<SVGTwoToneIconList*>(m_iconList)) {
+			twoTone->setToneColor(color);
+		}
+		m_pixmapCache.clear();
+		emit dataChanged(index(0), index(rowCount() - 1), {Qt::DecorationRole});
+	}
+}
+
+QColor IconModel::toneColor() const {
+	return m_toneColor;
+}
+
+bool IconModel::isTwoTone() const {
+	return dynamic_cast<SVGTwoToneIconList*>(m_iconList) != nullptr;
+}
+
 void IconModel::setGrayscale(bool enabled) {
 	if (m_grayscale != enabled) {
 		m_grayscale = enabled;
@@ -183,6 +210,60 @@ QString IconModel::filter() const {
 
 QPixmap IconModel::getIconPixmap(int index) const {
 	return renderIcon(index);
+}
+
+QPixmap IconModel::getIconPixmapAtSize(int index, int size) const {
+	if (!m_iconList || index < 0 || index >= static_cast<int>(m_allIcons.size()))
+		return QPixmap();
+
+	int actualIndex = m_allIcons[index].index;
+
+	if (auto *bitmap = bitmapIconList()) {
+		// Bitmap icon - get and scale
+		QPixmap pixmap = bitmap->getPixmap(actualIndex);
+		if (!pixmap.isNull() && (pixmap.width() != size || pixmap.height() != size)) {
+			pixmap = pixmap.scaled(size, size, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+		}
+		if (m_backgroundColor.alpha() > 0) {
+			QPixmap withBg(pixmap.size());
+			withBg.fill(m_backgroundColor);
+			QPainter painter(&withBg);
+			painter.drawPixmap(0, 0, pixmap);
+			painter.end();
+			return withBg;
+		}
+		return pixmap;
+	}
+
+	if (auto *svg = svgIconList()) {
+		// SVG icon - render at requested size
+		QString svgSource = svg->getSource(actualIndex);
+		if (svgSource.isEmpty())
+			return QPixmap();
+
+		// Resolve entities if present
+		EntityMap entities = currentEntities(index);
+		if (!entities.isEmpty()) {
+			svgSource = SVGIconList::resolveEntities(svgSource, entities);
+		}
+
+		QSvgRenderer renderer(svgSource.toUtf8());
+		if (!renderer.isValid())
+			return QPixmap();
+
+		QPixmap pixmap(size, size);
+		pixmap.fill(m_backgroundColor);
+
+		QPainter painter(&pixmap);
+		painter.setRenderHint(QPainter::Antialiasing);
+		painter.setRenderHint(QPainter::SmoothPixmapTransform);
+		renderer.render(&painter);
+		painter.end();
+
+		return pixmap;
+	}
+
+	return QPixmap();
 }
 
 QString IconModel::getIconSvg(int index) const {
