@@ -72,6 +72,36 @@ Icons/
 └── collections/         # Reference Delphi sources
 ```
 
+## Changelog
+
+### Version 1.2
+- Batch export functionality with folder selection
+- Export as PNG option for SVG icons
+- Export merged - combine all selected icons into single PNG image
+- Improved stroke width slider with value display
+- Separate stroke modes: absolute values for fill-based icons, relative scaling for Tabler
+- Copy SVG now outputs actual color values instead of "currentColor"
+
+### Version 1.1
+- Added stroke width control slider (5 levels: 0.5x to 1.5x) for outline icons
+- Stroke width works for all SVG collections (Tabler, Bootstrap, Fluent UI)
+- Fixed Tabler Two-Tone icons - now properly shows both tone color and stroke color
+
+### Version 1.0
+- Added Oxygen and Oxygen5 bitmap icon collections (PNG)
+- External RCC resource loading for bitmap icons
+- Grayscale mode for bitmap icons
+- Symlink/alias display for bitmap icons
+
+### Version 0.9
+- Initial release with SVG icon support
+- Bootstrap, Tabler, Fluent UI, and Breeze icon collections
+- Two-tone icon support
+- Fill color and background color customization
+- Search filtering
+- Export to SVG/PNG
+- Copy to clipboard
+
 ## Reference
 
 Based on [SVGIconViewer](https://github.com/skamradt/SVGIconViewer) by skamradt.

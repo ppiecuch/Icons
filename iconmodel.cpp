@@ -5,6 +5,49 @@
 #include <QPainter>
 #include <QRegularExpression>
 
+// Helper to adjust stroke-width in SVG source
+// For fill-based icons: sliderPos maps to absolute values 0, 0.25, 0.5, 1, 1.25, 1.5
+// For stroke-based icons: sliderPos maps to relative scales 0.5x, 0.75x, 1x, 1.25x, 1.5x
+static QString adjustStrokeWidth(const QString &svgSource, int sliderPos, bool fillBased) {
+	static QRegularExpression rx(QStringLiteral("stroke-width=\"([0-9.]+)\""));
+
+	if (fillBased) {
+		// Fill-based: replace stroke-width with absolute value
+		static const double absValues[] = { 0.0, 0.25, 0.5, 1.0, 1.25, 1.5 };
+		double newWidth = absValues[qBound(0, sliderPos, 5)];
+		QString result = svgSource;
+		result.replace(rx, QString("stroke-width=\"%1\"").arg(newWidth));
+		return result;
+	} else {
+		// Stroke-based: scale existing stroke-width values
+		if (sliderPos == 2)  // 1x scale, no change needed
+			return svgSource;
+
+		static const double scales[] = { 0.5, 0.75, 1.0, 1.25, 1.5 };
+		double scale = scales[qBound(0, sliderPos, 4)];
+
+		QString result = svgSource;
+		QRegularExpressionMatchIterator it = rx.globalMatch(svgSource);
+
+		// Process matches in reverse order to preserve positions
+		QList<QRegularExpressionMatch> matches;
+		while (it.hasNext())
+			matches.prepend(it.next());
+
+		for (const auto &match : matches) {
+			bool ok;
+			double width = match.captured(1).toDouble(&ok);
+			if (ok) {
+				double newWidth = width * scale;
+				if (newWidth < 0.25) newWidth = 0.25;  // Minimum stroke width
+				QString replacement = QString("stroke-width=\"%1\"").arg(newWidth);
+				result.replace(match.capturedStart(), match.capturedLength(), replacement);
+			}
+		}
+		return result;
+	}
+}
+
 // ============================================================================
 // IconModel
 // ============================================================================
@@ -194,6 +237,28 @@ QColor IconModel::backgroundColor() const {
 	return m_backgroundColor;
 }
 
+void IconModel::setStrokeWidth(int width) {
+	int maxValue = m_fillBasedStroke ? 5 : 4;
+	width = qBound(0, width, maxValue);
+	if (m_strokeWidth != width) {
+		m_strokeWidth = width;
+		m_pixmapCache.clear();
+		emit dataChanged(index(0), index(rowCount() - 1), {Qt::DecorationRole});
+	}
+}
+
+void IconModel::setStrokeMode(bool fillBased) {
+	if (m_fillBasedStroke != fillBased) {
+		m_fillBasedStroke = fillBased;
+		m_pixmapCache.clear();
+		emit dataChanged(index(0), index(rowCount() - 1), {Qt::DecorationRole});
+	}
+}
+
+int IconModel::strokeWidth() const {
+	return m_strokeWidth;
+}
+
 void IconModel::setFilter(const QString &filter) {
 	if (m_filter != filter) {
 		beginResetModel();
@@ -247,6 +312,9 @@ QPixmap IconModel::getIconPixmapAtSize(int index, int size) const {
 			svgSource = SVGIconList::resolveEntities(svgSource, entities);
 		}
 
+		// Apply stroke width adjustment
+		svgSource = adjustStrokeWidth(svgSource, m_strokeWidth, m_fillBasedStroke);
+
 		QSvgRenderer renderer(svgSource.toUtf8());
 		if (!renderer.isValid())
 			return QPixmap();
@@ -275,6 +343,12 @@ QString IconModel::getIconSvg(int index) const {
 		EntityMap entities = currentEntities(index);
 		if (!entities.isEmpty()) {
 			source = SVGIconList::resolveEntities(source, entities);
+		}
+		// Apply stroke width adjustment
+		source = adjustStrokeWidth(source, m_strokeWidth, m_fillBasedStroke);
+		// Replace "currentColor" with actual fill color
+		if (m_fillColor.isValid() && m_fillColor.alpha() > 0) {
+			source.replace("currentColor", m_fillColor.name());
 		}
 		return source;
 	}
@@ -374,6 +448,9 @@ QPixmap IconModel::renderIcon(int index) const {
 		if (!entities.isEmpty()) {
 			svgSource = SVGIconList::resolveEntities(svgSource, entities);
 		}
+
+		// Apply stroke width adjustment
+		svgSource = adjustStrokeWidth(svgSource, m_strokeWidth, m_fillBasedStroke);
 
 		QSvgRenderer renderer(svgSource.toUtf8());
 		if (!renderer.isValid())

@@ -2,9 +2,10 @@ TEMPLATE = app
 QT += widgets svg sql
 CONFIG += app_bundle sdk_no_version_check
 
-VERSION = 1.0
+VERSION = 1.2
+BUILD = 69
 
-DEFINES += VERSION=$$VERSION
+DEFINES += APP_VERSION=\\\"$$VERSION\\\" APP_BUILD=$$BUILD
 
 QMAKE_MACOSX_DEPLOYMENT_TARGET = 12
 

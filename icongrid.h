@@ -17,6 +17,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QColorDialog>
+#include <QSlider>
 #include <QMenu>
 
 #include "iconmodel.h"
@@ -101,6 +102,10 @@ public:
 
 	void setBitmapMode(bool isBitmap);
 
+	int strokeWidth() const;
+	void setStrokeWidthVisible(bool visible);
+	void setStrokeMode(bool fillBased);  // true = absolute values, false = relative scaling
+
 signals:
 	void collectionChanged(const QString &name);
 	void fillColorChanged(const QColor &color);
@@ -109,6 +114,7 @@ signals:
 	void iconSizeChanged(int size);
 	void styleChanged(const QString &style);
 	void bitmapSizeChanged(int size);
+	void strokeWidthChanged(int width);
 
 public slots:
 	void setFillColor(const QColor &color);
@@ -121,6 +127,7 @@ private slots:
 	void onBackgroundColorClicked();
 	void onIconSizeChanged(int index);
 	void onBitmapSizeChanged(int index);
+	void onStrokeWidthChanged(int value);
 
 private:
 	void updateFillColorButton();
@@ -136,6 +143,12 @@ private:
 	QToolButton *m_fillColorButton;
 	QToolButton *m_toneColorButton;
 	QToolButton *m_bgColorButton;
+	QSlider *m_strokeWidthSlider;
+	QLabel *m_strokeWidthLabel;
+	QLabel *m_strokeWidthValue;
+	bool m_fillBasedStroke = true;  // true = absolute values, false = relative scaling
+	int m_fillBasedSliderValue = 0;   // Stored value for fill-based mode (default 0)
+	int m_strokeBasedSliderValue = 2; // Stored value for stroke-based mode (default 1x)
 	QColor m_fillColor = Qt::black;
 	QColor m_toneColor = QColor(200, 200, 200);
 	QColor m_backgroundColor = Qt::transparent;
@@ -173,6 +186,8 @@ signals:
 private slots:
 	void onButtonClicked(int index);
 	void onEntityValueChanged(int row, int column);
+	void onExportMergedChanged(bool checked);
+	void onDoExport();
 
 private:
 	void updateEntitiesTable();
@@ -197,9 +212,13 @@ private:
 	QWidget *m_exportWidget;
 	QListWidget *m_exportListWidget;
 	ActiveLabel *m_clearExportButton;
+	ActiveLabel *m_doExportButton;
 	QList<ExportIconInfo> m_exportList;
-	QLabel *m_exportOptionsLabel;
+	QCheckBox *m_exportAsPngCheckbox;
 	QCheckBox *m_exportMergedCheckbox;
+	QLineEdit *m_mergedFilenameEdit;
+	bool m_exportAsPngSaved = false;  // Saved state when merged is checked
+	QString m_lastExportPath;  // Last used export folder path
 
 	// View switcher (Export/Entities buttons + stacked widget)
 	QWidget *m_viewSwitcher;
@@ -235,6 +254,8 @@ public slots:
 	void setFillColor(const QColor &color);
 	void setToneColor(const QColor &color);
 	void setBackgroundColor(const QColor &color);
+	void setStrokeWidth(int width);
+	void setStrokeMode(bool fillBased);
 
 private slots:
 	void onSelectionChanged(const QModelIndex &current, const QModelIndex &previous);

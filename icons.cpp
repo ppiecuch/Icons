@@ -1,63 +1,64 @@
 #include "icons.h"
-#include "ui_icons.h"
 #include "icongrid.h"
 #include "iconmodel.h"
+#include "ui_icons.h"
 
 #include <QApplication>
 #include <QClipboard>
+#include <QDebug>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QSettings>
-#include <QDebug>
+
+// Stringify macros for build number
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
 
 // Generated icon list headers - Bootstrap
-#include "library/lib_bootstrap_regular_16.h"
 #include "library/lib_bootstrap_fill_16.h"
+#include "library/lib_bootstrap_regular_16.h"
 
 // Generated icon list headers - Tabler
-#include "library/lib_tabler_outline_24.h"
 #include "library/lib_tabler_filled_24.h"
+#include "library/lib_tabler_outline_24.h"
 
 // Generated icon list headers - Fluent UI (multiple sizes)
-#include "library/lib_fluent_regular_16.h"
 #include "library/lib_fluent_filled_16.h"
-#include "library/lib_fluent_regular_20.h"
 #include "library/lib_fluent_filled_20.h"
-#include "library/lib_fluent_regular_24.h"
 #include "library/lib_fluent_filled_24.h"
-#include "library/lib_fluent_regular_32.h"
 #include "library/lib_fluent_filled_32.h"
+#include "library/lib_fluent_regular_16.h"
+#include "library/lib_fluent_regular_20.h"
+#include "library/lib_fluent_regular_24.h"
+#include "library/lib_fluent_regular_32.h"
 
 // Generated icon list headers - Breeze
 #include "library/lib_breeze_actions_22.h"
 #include "library/lib_breeze_apps_48.h"
-#include "library/lib_breeze_places_22.h"
-#include "library/lib_breeze_status_22.h"
 #include "library/lib_breeze_devices_22.h"
 #include "library/lib_breeze_mimetypes_22.h"
+#include "library/lib_breeze_places_22.h"
+#include "library/lib_breeze_status_22.h"
 
 // Generated icon list headers - Oxygen (Bitmap)
+#include "library/bitmap/lib_oxygen_128.h"
 #include "library/bitmap/lib_oxygen_16.h"
 #include "library/bitmap/lib_oxygen_22.h"
+#include "library/bitmap/lib_oxygen_256.h"
 #include "library/bitmap/lib_oxygen_32.h"
 #include "library/bitmap/lib_oxygen_48.h"
 #include "library/bitmap/lib_oxygen_64.h"
-#include "library/bitmap/lib_oxygen_128.h"
-#include "library/bitmap/lib_oxygen_256.h"
 
 // Generated icon list headers - Oxygen5 (Bitmap)
+#include "library/bitmap/lib_oxygen5_128.h"
 #include "library/bitmap/lib_oxygen5_16.h"
 #include "library/bitmap/lib_oxygen5_22.h"
+#include "library/bitmap/lib_oxygen5_256.h"
 #include "library/bitmap/lib_oxygen5_32.h"
 #include "library/bitmap/lib_oxygen5_48.h"
 #include "library/bitmap/lib_oxygen5_64.h"
-#include "library/bitmap/lib_oxygen5_128.h"
-#include "library/bitmap/lib_oxygen5_256.h"
 
-MainWindow::MainWindow(QWidget *parent)
-	: QMainWindow(parent)
-	, m_ui(new Ui::MainWindow)
-{
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_ui(new Ui::MainWindow) {
 	m_ui->setupUi(this);
 
 	// Setup icon size action group
@@ -102,114 +103,90 @@ void MainWindow::registerBuiltinCollections() {
 	auto &registry = IconCollectionRegistry::instance();
 
 	// Bootstrap Icons 16 - has Outline + Filled + TwoTone
-	registry.registerCollection({
-		"bootstrap-16", "Bootstrap 16", 16,
-		{
-			{IconStyle::Outline, []() { return new BootstrapRegular16IconList(); }},
-			{IconStyle::Filled, []() { return new BootstrapFill16IconList(); }}
-		}
-	});
+	registry.registerCollection({ "bootstrap-16", "Bootstrap 16", 16,
+			{ { IconStyle::Outline, []() { return new BootstrapRegular16IconList(); } },
+					{ IconStyle::Filled, []() { return new BootstrapFill16IconList(); } } } });
 
 	// Tabler Icons 24 - has Outline + Filled + TwoTone
-	registry.registerCollection({
-		"tabler-24", "Tabler 24", 24,
-		{
-			{IconStyle::Outline, []() { return new TablerOutline24IconList(); }},
-			{IconStyle::Filled, []() { return new TablerFilled24IconList(); }}
-		}
-	});
+	registry.registerCollection({ "tabler-24", "Tabler 24", 24,
+			{ { IconStyle::Outline, []() { return new TablerOutline24IconList(); } },
+					{ IconStyle::Filled, []() { return new TablerFilled24IconList(); } } } });
 
 	// Fluent UI Icons - multiple sizes, each with Regular (Outline) + Filled
-	registry.registerCollection({
-		"fluent-16", "Fluent UI 16", 16,
-		{
-			{IconStyle::Outline, []() { return new FluentRegular16IconList(); }},
-			{IconStyle::Filled, []() { return new FluentFilled16IconList(); }}
-		}
-	});
-	registry.registerCollection({
-		"fluent-20", "Fluent UI 20", 20,
-		{
-			{IconStyle::Outline, []() { return new FluentRegular20IconList(); }},
-			{IconStyle::Filled, []() { return new FluentFilled20IconList(); }}
-		}
-	});
-	registry.registerCollection({
-		"fluent-24", "Fluent UI 24", 24,
-		{
-			{IconStyle::Outline, []() { return new FluentRegular24IconList(); }},
-			{IconStyle::Filled, []() { return new FluentFilled24IconList(); }}
-		}
-	});
-	registry.registerCollection({
-		"fluent-32", "Fluent UI 32", 32,
-		{
-			{IconStyle::Outline, []() { return new FluentRegular32IconList(); }},
-			{IconStyle::Filled, []() { return new FluentFilled32IconList(); }}
-		}
-	});
+	registry.registerCollection({ "fluent-16", "Fluent UI 16", 16,
+			{ { IconStyle::Outline, []() { return new FluentRegular16IconList(); } },
+					{ IconStyle::Filled, []() { return new FluentFilled16IconList(); } } } });
+	registry.registerCollection({ "fluent-20", "Fluent UI 20", 20,
+			{ { IconStyle::Outline, []() { return new FluentRegular20IconList(); } },
+					{ IconStyle::Filled, []() { return new FluentFilled20IconList(); } } } });
+	registry.registerCollection({ "fluent-24", "Fluent UI 24", 24,
+			{ { IconStyle::Outline, []() { return new FluentRegular24IconList(); } },
+					{ IconStyle::Filled, []() { return new FluentFilled24IconList(); } } } });
+	registry.registerCollection({ "fluent-32", "Fluent UI 32", 32,
+			{ { IconStyle::Outline, []() { return new FluentRegular32IconList(); } },
+					{ IconStyle::Filled, []() { return new FluentFilled32IconList(); } } } });
 
 	// Breeze Icons (KDE) - organized by category, single style per category
-	registry.registerCollection({
-		"breeze-actions", "Breeze Actions", 22,
-		{{IconStyle::Outline, []() { return new BreezeActions22IconList(); }}}
-	});
-	registry.registerCollection({
-		"breeze-apps", "Breeze Apps", 48,
-		{{IconStyle::Outline, []() { return new BreezeApps48IconList(); }}}
-	});
-	registry.registerCollection({
-		"breeze-places", "Breeze Places", 22,
-		{{IconStyle::Outline, []() { return new BreezePlaces22IconList(); }}}
-	});
-	registry.registerCollection({
-		"breeze-status", "Breeze Status", 22,
-		{{IconStyle::Outline, []() { return new BreezeStatus22IconList(); }}}
-	});
-	registry.registerCollection({
-		"breeze-devices", "Breeze Devices", 22,
-		{{IconStyle::Outline, []() { return new BreezeDevices22IconList(); }}}
-	});
-	registry.registerCollection({
-		"breeze-mimetypes", "Breeze Mimetypes", 22,
-		{{IconStyle::Outline, []() { return new BreezeMimetypes22IconList(); }}}
-	});
+	registry.registerCollection({ "breeze-actions", "Breeze Actions", 22,
+			{ { IconStyle::Outline, []() { return new BreezeActions22IconList(); } } } });
+	registry.registerCollection({ "breeze-apps", "Breeze Apps", 48,
+			{ { IconStyle::Outline, []() { return new BreezeApps48IconList(); } } } });
+	registry.registerCollection({ "breeze-places", "Breeze Places", 22,
+			{ { IconStyle::Outline, []() { return new BreezePlaces22IconList(); } } } });
+	registry.registerCollection({ "breeze-status", "Breeze Status", 22,
+			{ { IconStyle::Outline, []() { return new BreezeStatus22IconList(); } } } });
+	registry.registerCollection({ "breeze-devices", "Breeze Devices", 22,
+			{ { IconStyle::Outline, []() { return new BreezeDevices22IconList(); } } } });
+	registry.registerCollection({ "breeze-mimetypes", "Breeze Mimetypes", 22,
+			{ { IconStyle::Outline, []() { return new BreezeMimetypes22IconList(); } } } });
 
 	// Oxygen Icons (Bitmap) - multiple sizes available
-	registry.registerBitmapCollection({
-		"oxygen", "Oxygen Icons",
-		{16, 22, 32, 48, 64, 128, 256},
-		[](int size) -> BitmapIconList* {
-			switch (size) {
-				case 16: return new Oxygen16IconList();
-				case 22: return new Oxygen22IconList();
-				case 32: return new Oxygen32IconList();
-				case 48: return new Oxygen48IconList();
-				case 64: return new Oxygen64IconList();
-				case 128: return new Oxygen128IconList();
-				case 256: return new Oxygen256IconList();
-				default: return new Oxygen32IconList();
-			}
-		}
-	});
+	registry.registerBitmapCollection({ "oxygen", "Oxygen Icons",
+			{ 16, 22, 32, 48, 64, 128, 256 },
+			[](int size) -> BitmapIconList * {
+				switch (size) {
+					case 16:
+						return new Oxygen16IconList();
+					case 22:
+						return new Oxygen22IconList();
+					case 32:
+						return new Oxygen32IconList();
+					case 48:
+						return new Oxygen48IconList();
+					case 64:
+						return new Oxygen64IconList();
+					case 128:
+						return new Oxygen128IconList();
+					case 256:
+						return new Oxygen256IconList();
+					default:
+						return new Oxygen32IconList();
+				}
+			} });
 
 	// Oxygen5 Icons (Bitmap) - multiple sizes available
-	registry.registerBitmapCollection({
-		"oxygen5", "Oxygen5 Icons",
-		{16, 22, 32, 48, 64, 128, 256},
-		[](int size) -> BitmapIconList* {
-			switch (size) {
-				case 16: return new Oxygen516IconList();
-				case 22: return new Oxygen522IconList();
-				case 32: return new Oxygen532IconList();
-				case 48: return new Oxygen548IconList();
-				case 64: return new Oxygen564IconList();
-				case 128: return new Oxygen5128IconList();
-				case 256: return new Oxygen5256IconList();
-				default: return new Oxygen532IconList();
-			}
-		}
-	});
+	registry.registerBitmapCollection({ "oxygen5", "Oxygen5 Icons",
+			{ 16, 22, 32, 48, 64, 128, 256 },
+			[](int size) -> BitmapIconList * {
+				switch (size) {
+					case 16:
+						return new Oxygen516IconList();
+					case 22:
+						return new Oxygen522IconList();
+					case 32:
+						return new Oxygen532IconList();
+					case 48:
+						return new Oxygen548IconList();
+					case 64:
+						return new Oxygen564IconList();
+					case 128:
+						return new Oxygen5128IconList();
+					case 256:
+						return new Oxygen5256IconList();
+					default:
+						return new Oxygen532IconList();
+				}
+			} });
 }
 
 void MainWindow::loadCollections() {
@@ -227,7 +204,7 @@ void MainWindow::loadCollections() {
 	}
 
 	// Set up the toolbar's collection dropdown
-	auto *toolbar = m_ui->iconGrid->findChild<IconToolBar*>();
+	auto *toolbar = m_ui->iconGrid->findChild<IconToolBar *>();
 	if (toolbar) {
 		toolbar->setCollections(names);
 		connect(toolbar, &IconToolBar::collectionChanged, this, &MainWindow::onCollectionChanged);
@@ -259,9 +236,15 @@ void MainWindow::loadCollections() {
 		m_isBitmapCollection = false;
 		loadCurrentCollection();
 
+		// Set stroke mode (Tabler = stroke-based, others = fill-based)
+		bool isTabler = m_currentCollectionId.startsWith("tabler");
+		m_ui->iconGrid->setStrokeMode(!isTabler);
+
 		// Update available styles in toolbar
 		if (toolbar) {
 			updateAvailableStyles();
+			// Show stroke slider for SVG Outline/TwoTone styles
+			toolbar->setStrokeWidthVisible(true);
 		}
 	}
 
@@ -319,7 +302,7 @@ void MainWindow::updateAvailableStyles() {
 
 	if (m_isBitmapCollection) {
 		// Bitmap collections have Color/Grayscale styles
-		toolbar->setStyles({"Color", "Grayscale"});
+		toolbar->setStyles({ "Color", "Grayscale" });
 
 		// Also update available sizes
 		const BitmapCollection *coll = registry.findBitmapCollection(m_currentCollectionId);
@@ -357,6 +340,11 @@ void MainWindow::onCollectionChanged(const QString &name) {
 			m_currentBitmapSize = coll.defaultSize();
 			loadCurrentCollection();
 			updateAvailableStyles();
+
+			// Hide stroke width slider for bitmap collections
+			auto *toolbar = m_ui->iconGrid->toolBar();
+			if (toolbar)
+				toolbar->setStrokeWidthVisible(false);
 			return;
 		}
 	}
@@ -372,6 +360,16 @@ void MainWindow::onCollectionChanged(const QString &name) {
 			m_currentStyle = IconStyle::Outline;
 			loadCurrentCollection();
 			updateAvailableStyles();
+
+			// Update stroke mode and visibility for SVG outline/twotone styles
+			bool isTabler = m_currentCollectionId.startsWith("tabler");
+			m_ui->iconGrid->setStrokeMode(!isTabler);  // Tabler = stroke-based, others = fill-based
+
+			auto *toolbar = m_ui->iconGrid->toolBar();
+			if (toolbar) {
+				bool showStroke = (m_currentStyle == IconStyle::Outline || m_currentStyle == IconStyle::TwoTone);
+				toolbar->setStrokeWidthVisible(showStroke);
+			}
 			break;
 		}
 	}
@@ -391,6 +389,10 @@ void MainWindow::onStyleChanged(const QString &styleName) {
 		auto *toolbar = m_ui->iconGrid->toolBar();
 		if (toolbar) {
 			toolbar->setTwoToneMode(m_currentStyle == IconStyle::TwoTone);
+
+			// Show stroke width slider for Outline and TwoTone styles
+			bool showStroke = (m_currentStyle == IconStyle::Outline || m_currentStyle == IconStyle::TwoTone);
+			toolbar->setStrokeWidthVisible(showStroke);
 		}
 	}
 }
@@ -436,7 +438,7 @@ void MainWindow::onIconDoubleClicked(int index, const QString &name) {
 		}
 	} else {
 		// Copy SVG on double-click for SVG collections
-		auto *svg = static_cast<SVGIconList*>(m_currentList);
+		auto *svg = static_cast<SVGIconList *>(m_currentList);
 		QString source = svg->getSource(index);
 		QApplication::clipboard()->setText(source);
 		statusBar()->showMessage(tr("Copied SVG: %1").arg(name), 3000);
@@ -452,8 +454,8 @@ void MainWindow::onCopySvg() {
 		return;
 	}
 
-	auto *svg = static_cast<SVGIconList*>(m_currentList);
-	QString source = svg->getSource(m_selectedIndex);
+	// Use model to get SVG with proper fill color and stroke width applied
+	QString source = m_ui->iconGrid->model()->getIconSvg(m_selectedIndex);
 	QApplication::clipboard()->setText(source);
 	statusBar()->showMessage(tr("Copied SVG to clipboard"), 3000);
 }
@@ -473,19 +475,18 @@ void MainWindow::onExport() {
 		QString defaultExt = m_isBitmapCollection ? ".png" : ".svg";
 		QString defaultName = m_selectedName + defaultExt;
 		QString filter = m_isBitmapCollection
-			? tr("PNG Files (*.png);;All Files (*)")
-			: tr("SVG Files (*.svg);;PNG Files (*.png);;All Files (*)");
+				? tr("PNG Files (*.png);;All Files (*)")
+				: tr("SVG Files (*.svg);;PNG Files (*.png);;All Files (*)");
 
 		QString filename = QFileDialog::getSaveFileName(
-			this,
-			tr("Export Icon"),
-			defaultName,
-			filter
-		);
+				this,
+				tr("Export Icon"),
+				defaultName,
+				filter);
 
 		if (!filename.isEmpty()) {
 			if (filename.endsWith(".svg", Qt::CaseInsensitive) && !m_isBitmapCollection) {
-				auto *svgList = static_cast<SVGIconList*>(m_currentList);
+				auto *svgList = static_cast<SVGIconList *>(m_currentList);
 				QString svg = svgList->getSource(m_selectedIndex);
 				QFile file(filename);
 				if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
@@ -509,35 +510,37 @@ void MainWindow::onAbout() {
 	aboutBox.setWindowTitle(tr("About Icon Viewer"));
 	aboutBox.setTextFormat(Qt::RichText);
 	aboutBox.setText(
-		tr("<p><span style='font-size:18pt; font-weight:600;'>Icon Viewer</span><br/>"
-		   "<span style='font-size:10pt; font-style:italic;'>Browse, preview, and export icons from popular icon libraries.</span></p>"));
+			tr("<p><span style='font-size:18pt; font-weight:600;'>Icon Viewer</span> "
+			   "<span style='font-size:10pt;'>v%1 (%2)</span><br/>"
+			   "<span style='font-size:10pt; font-style:italic;'>Browse, preview, and export icons from popular icon libraries.</span></p>")
+			.arg(APP_VERSION).arg(TOSTRING(APP_BUILD)));
 
 	aboutBox.setInformativeText(
-		tr("<p><b>Supported Icon Libraries:</b></p>"
-		   "<p><b>SVG Icons:</b><br/>"
-		   "&bull; <a href='https://icons.getbootstrap.com/'>Bootstrap Icons</a> - Open source icon set<br/>"
-		   "&bull; <a href='https://tabler.io/icons'>Tabler Icons</a> - Over 5000 free icons<br/>"
-		   "&bull; <a href='https://github.com/microsoft/fluentui-system-icons'>Fluent UI Icons</a> - Microsoft's icon system<br/>"
-		   "&bull; <a href='https://develop.kde.org/frameworks/breeze-icons/'>Breeze Icons</a> - KDE's icon theme</p>"
-		   "<p><b>Bitmap Icons (PNG):</b><br/>"
-		   "&bull; <a href='https://techbase.kde.org/Projects/Oxygen/Licensing'>Oxygen Icons</a> - Classic KDE icon theme<br/>"
-		   "&bull; <a href='https://invent.kde.org/frameworks/oxygen-icons'>Oxygen5 Icons</a> - Updated Oxygen icons</p>"
-		   "<hr/>"
-		   "<p><b>Written with:</b><br/>"
-		   "&bull; <a href='https://qt.io'>Qt</a> - Cross-platform application framework</p>"
-		   "<p><b>Author:</b> Pawel Piecuch<br/>"
-		   "<b>Copyright</b> &copy; 2024, <i>Komsoft Oprogramowanie</i></p>"
-		   "<hr/>"
-		   "<p><i>If you like this application, you can support my work and further development:</i><br/>"
-		   "<a href='https://www.paypal.com/donate?business=6QXS8MBPKBTTN&item_name=Icon%20Viewer&currency_code=USD'>Donate with PayPal</a></p>"
-		   "<hr/>"
-		   "<p style='font-size:10pt;'><b>Version:</b> %1<br/>"
-		   "<b>Qt Version:</b> %2<br/>"
-		   "<b>Build:</b> %3 %4</p>")
-		.arg(qApp->applicationVersion())
-		.arg(qVersion())
-		.arg(__DATE__)
-		.arg(__TIME__));
+			tr("<p><b>Supported Icon Libraries:</b></p>"
+			   "<p><b>SVG Icons:</b><br/>"
+			   "&bull; <a href='https://icons.getbootstrap.com/'>Bootstrap Icons</a> - Open source icon set<br/>"
+			   "&bull; <a href='https://tabler.io/icons'>Tabler Icons</a> - Over 5000 free icons<br/>"
+			   "&bull; <a href='https://github.com/microsoft/fluentui-system-icons'>Fluent UI Icons</a> - Microsoft's icon system<br/>"
+			   "&bull; <a href='https://develop.kde.org/frameworks/breeze-icons/'>Breeze Icons</a> - KDE's icon theme</p>"
+			   "<p><b>Bitmap Icons (PNG):</b><br/>"
+			   "&bull; <a href='https://techbase.kde.org/Projects/Oxygen/Licensing'>Oxygen Icons</a> - Classic KDE icon theme<br/>"
+			   "&bull; <a href='https://invent.kde.org/frameworks/oxygen-icons'>Oxygen5 Icons</a> - Updated Oxygen icons</p>"
+			   "<hr/>"
+			   "<p><b>Written with:</b><br/>"
+			   "&bull; <a href='https://qt.io'>Qt</a> - Cross-platform application framework</p>"
+			   "<p><b>Author:</b> Pawel Piecuch<br/>"
+			   "<b>Copyright</b> &copy; 2024, <i>Komsoft Oprogramowanie</i></p>"
+			   "<hr/>"
+			   "<p><i>If you like this application, you can support my work and further development:</i><br/>"
+			   "<a href='https://www.paypal.com/donate?business=6QXS8MBPKBTTN&item_name=Icon%20Viewer&currency_code=USD'>Donate with PayPal</a></p>"
+			   "<hr/>"
+			   "<p style='font-size:10pt;'><b>Version:</b> %1<br/>"
+			   "<b>Qt Version:</b> %2<br/>"
+			   "<b>Build:</b> %3 %4</p>")
+					.arg(qApp->applicationVersion())
+					.arg(qVersion())
+					.arg(__DATE__)
+					.arg(__TIME__));
 
 	aboutBox.setStandardButtons(QMessageBox::Ok);
 	aboutBox.exec();
@@ -572,11 +575,12 @@ void MainWindow::updateIconCount() {
 
 int main(int argc, char *argv[]) {
 	QApplication app(argc, argv);
-	app.setApplicationName("SVG Icon Viewer");
+	app.setApplicationName("Icon Viewer");
 	app.setOrganizationName("KomSoft");
-	app.setApplicationVersion("1.0");
+	app.setApplicationVersion(QString("%1 (%2)").arg(APP_VERSION).arg(TOSTRING(APP_BUILD)));
 
 	MainWindow w;
+	w.setWindowTitle(QString("Icon Viewer v%1 (%2)").arg(APP_VERSION).arg(TOSTRING(APP_BUILD)));
 	w.show();
 
 	return app.exec();

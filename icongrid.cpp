@@ -6,6 +6,10 @@
 #include <QMimeData>
 #include <QBuffer>
 #include <QScrollBar>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QDir>
+#include <QFileInfo>
 #include <QDebug>
 
 // ============================================================================
@@ -151,7 +155,7 @@ IconToolBar::IconToolBar(QWidget *parent)
 	m_styleCombo->setMinimumWidth(100);
 
 	// Size selector (for SVG - display size)
-	m_sizeLabel = new QLabel(tr("Size:"), this);
+	m_sizeLabel = new QLabel(tr("Cell Size:"), this);
 	m_sizeCombo = new QComboBox(this);
 	m_sizeCombo->addItems({"24", "32", "48", "64", "96", "128"});
 	m_sizeCombo->setCurrentIndex(1); // Default to 32
@@ -181,6 +185,22 @@ IconToolBar::IconToolBar(QWidget *parent)
 	m_bgColorButton->setToolTip(tr("Set background color"));
 	updateBgColorButton();
 
+	// Stroke width slider (5 positions: 0.5x, 0.75x, 1x, 1.25x, 1.5x)
+	m_strokeWidthLabel = new QLabel(tr("Stroke:"), this);
+	m_strokeWidthSlider = new QSlider(Qt::Horizontal, this);
+	m_strokeWidthSlider->setRange(0, 5);
+	m_strokeWidthSlider->setValue(0);  // Default to 0 (no stroke)
+	m_strokeWidthSlider->setTickPosition(QSlider::TicksBelow);
+	m_strokeWidthSlider->setTickInterval(1);
+	m_strokeWidthSlider->setFixedWidth(80);
+	m_strokeWidthSlider->setToolTip(tr("Stroke width: 0 / 0.25 / 0.5 / 1 / 1.25 / 1.5"));
+	m_strokeWidthValue = new QLabel("0", this);
+	m_strokeWidthValue->setAttribute(Qt::WA_MacSmallSize);
+	m_strokeWidthValue->setFixedWidth(28);
+	m_strokeWidthLabel->setVisible(false);
+	m_strokeWidthSlider->setVisible(false);
+	m_strokeWidthValue->setVisible(false);
+
 	layout->addWidget(collectionLabel);
 	layout->addWidget(m_collectionCombo);
 	layout->addSpacing(16);
@@ -192,6 +212,10 @@ IconToolBar::IconToolBar(QWidget *parent)
 	layout->addWidget(m_bitmapSizeLabel);
 	layout->addWidget(m_bitmapSizeCombo);
 	layout->addStretch();
+	layout->addWidget(m_strokeWidthLabel);
+	layout->addWidget(m_strokeWidthSlider);
+	layout->addWidget(m_strokeWidthValue);
+	layout->addSpacing(8);
 	layout->addWidget(m_fillColorButton);
 	layout->addWidget(m_toneColorButton);
 	layout->addWidget(m_bgColorButton);
@@ -211,6 +235,8 @@ IconToolBar::IconToolBar(QWidget *parent)
 			this, &IconToolBar::onToneColorClicked);
 	connect(m_bgColorButton, &QToolButton::clicked,
 			this, &IconToolBar::onBackgroundColorClicked);
+	connect(m_strokeWidthSlider, &QSlider::valueChanged,
+			this, &IconToolBar::onStrokeWidthChanged);
 }
 
 void IconToolBar::setCollections(const QStringList &names) {
@@ -268,6 +294,54 @@ void IconToolBar::setBackgroundColor(const QColor &color) {
 
 void IconToolBar::setTwoToneMode(bool enabled) {
 	m_toneColorButton->setVisible(enabled);
+}
+
+int IconToolBar::strokeWidth() const {
+	return m_strokeWidthSlider->value();
+}
+
+void IconToolBar::setStrokeWidthVisible(bool visible) {
+	m_strokeWidthLabel->setVisible(visible);
+	m_strokeWidthSlider->setVisible(visible);
+	m_strokeWidthValue->setVisible(visible);
+}
+
+void IconToolBar::setStrokeMode(bool fillBased) {
+	if (m_fillBasedStroke == fillBased)
+		return;  // No change
+
+	// Save current slider value for the current mode
+	if (m_fillBasedStroke) {
+		m_fillBasedSliderValue = m_strokeWidthSlider->value();
+	} else {
+		m_strokeBasedSliderValue = m_strokeWidthSlider->value();
+	}
+
+	m_fillBasedStroke = fillBased;
+	if (fillBased) {
+		// Fill-based icons: absolute values 0, 0.25, 0.5, 1, 1.25, 1.5
+		m_strokeWidthSlider->setRange(0, 5);
+		m_strokeWidthSlider->setValue(m_fillBasedSliderValue);  // Restore saved value (default 0)
+		m_strokeWidthSlider->setToolTip(tr("Stroke width: 0 / 0.25 / 0.5 / 1 / 1.25 / 1.5"));
+	} else {
+		// Stroke-based icons (Tabler): relative scaling
+		m_strokeWidthSlider->setRange(0, 4);
+		m_strokeWidthSlider->setValue(m_strokeBasedSliderValue);
+		m_strokeWidthSlider->setToolTip(tr("Stroke scale: 0.5x / 0.75x / 1x / 1.25x / 1.5x"));
+	}
+	onStrokeWidthChanged(m_strokeWidthSlider->value());
+}
+
+void IconToolBar::onStrokeWidthChanged(int value) {
+	// Update value label based on mode
+	if (m_fillBasedStroke) {
+		static const char* values[] = {"0", "0.25", "0.5", "1", "1.25", "1.5"};
+		m_strokeWidthValue->setText(values[qBound(0, value, 5)]);
+	} else {
+		static const char* values[] = {"0.5x", "0.75x", "1x", "1.25x", "1.5x"};
+		m_strokeWidthValue->setText(values[qBound(0, value, 4)]);
+	}
+	emit strokeWidthChanged(value);
 }
 
 void IconToolBar::onFillColorClicked() {
@@ -404,8 +478,8 @@ IconPreview::IconPreview(QWidget *parent)
 	m_copyInfoButton = new ActiveLabel(2, "Copy Info", "copy_info_button", this);
 	m_copyInfoButton->setToolTip(tr("Copy icon information to clipboard"));
 
-	m_exportButton = new ActiveLabel(3, "Export ...", "export_button", this);
-	m_exportButton->setToolTip(tr("Export icons from list to files"));
+	m_exportButton = new ActiveLabel(3, "Add to Export", "export_button", this);
+	m_exportButton->setToolTip(tr("Add current icon to export list"));
 
 	buttonLayout->addWidget(m_copySvgButton);
 	buttonLayout->addWidget(m_copyPngButton);
@@ -449,20 +523,45 @@ IconPreview::IconPreview(QWidget *parent)
 	m_exportWidget = new QWidget(this);
 	auto *exportLayout = new QVBoxLayout(m_exportWidget);
 	exportLayout->setContentsMargins(0, 4, 0, 0);
+	exportLayout->setSpacing(4);
 
-	m_exportOptionsLabel = new QLabel(tr("Export Options:"), m_exportWidget);
-	m_exportMergedCheckbox = new QCheckBox(tr("Export merged png"), m_exportWidget);
+	// Export as PNG checkbox
+	m_exportAsPngCheckbox = new QCheckBox(tr("Export as PNG"), m_exportWidget);
+	m_exportAsPngCheckbox->setToolTip(tr("Export SVG icons as PNG images"));
+
+	// Export merged checkbox
+	m_exportMergedCheckbox = new QCheckBox(tr("Export merged"), m_exportWidget);
 	m_exportMergedCheckbox->setToolTip(tr("Merge all icons into a single PNG image"));
+
+	// Merged filename field
+	m_mergedFilenameEdit = new QLineEdit(m_exportWidget);
+	m_mergedFilenameEdit->setAttribute(Qt::WA_MacSmallSize);
+	m_mergedFilenameEdit->setText("icons_all.png");
+	m_mergedFilenameEdit->setPlaceholderText("icons_all.png");
+	m_mergedFilenameEdit->setEnabled(false);
 
 	m_exportListWidget = new QListWidget(m_exportWidget);
 
+	// Bottom buttons
+	auto *exportButtonLayout = new QHBoxLayout();
+	exportButtonLayout->setSpacing(8);
 	m_clearExportButton = new ActiveLabel(4, "Clear", "clear_export_button", m_exportWidget);
 	m_clearExportButton->setToolTip(tr("Clear export list"));
+	m_doExportButton = new ActiveLabel(5, "Export...", "do_export_button", m_exportWidget);
+	m_doExportButton->setToolTip(tr("Export icons to folder"));
+	exportButtonLayout->addWidget(m_clearExportButton);
+	exportButtonLayout->addStretch();
+	exportButtonLayout->addWidget(m_doExportButton);
 
-	exportLayout->addWidget(m_exportOptionsLabel);
+	exportLayout->addWidget(m_exportAsPngCheckbox);
 	exportLayout->addWidget(m_exportMergedCheckbox);
+	exportLayout->addWidget(m_mergedFilenameEdit);
 	exportLayout->addWidget(m_exportListWidget, 1);
-	exportLayout->addWidget(m_clearExportButton);
+	exportLayout->addLayout(exportButtonLayout);
+
+	// Connect checkbox interaction
+	connect(m_exportMergedCheckbox, &QCheckBox::toggled, this, &IconPreview::onExportMergedChanged);
+	connect(m_doExportButton, &ActiveLabel::clicked, this, &IconPreview::onDoExport);
 
 	// === Entities widget ===
 	m_entitiesWidget = new QWidget();
@@ -544,8 +643,16 @@ void IconPreview::onButtonClicked(int index) {
 				QApplication::clipboard()->setText(info.trimmed());
 			}
 			break;
-		case 3: // Export
-			emit exportRequested(m_exportMergedCheckbox->isChecked());
+		case 3: // Add to Export
+			if (!m_currentName.isEmpty()) {
+				ExportIconInfo info;
+				info.name = m_currentName;
+				info.pixmap = m_currentPixmap;
+				info.svg = m_currentSvg;
+				info.style = m_currentStyle;
+				info.size = m_currentSize;
+				addToExportList(info);
+			}
 			break;
 		case 4: // Clear export list
 			clearExportList();
@@ -586,7 +693,7 @@ void IconPreview::setIcon(const QPixmap &pixmap, const QString &name, const QStr
 	m_copySvgButton->setEnabled(!svg.isEmpty());
 	m_copyPngButton->setEnabled(!pixmap.isNull());
 	m_copyInfoButton->setEnabled(!name.isEmpty());
-	m_exportButton->setEnabled(!m_exportList.isEmpty());
+	m_exportButton->setEnabled(!name.isEmpty() || !m_exportList.isEmpty());
 }
 
 void IconPreview::addToExportList(const ExportIconInfo &info) {
@@ -617,7 +724,7 @@ void IconPreview::addToExportList(const ExportIconInfo &info) {
 void IconPreview::clearExportList() {
 	m_exportList.clear();
 	m_exportListWidget->clear();
-	m_exportButton->setEnabled(false);
+	m_exportButton->setEnabled(!m_currentName.isEmpty());
 }
 
 QList<ExportIconInfo> IconPreview::exportList() const {
@@ -751,6 +858,108 @@ void IconPreview::onEntityValueChanged(int row, int column) {
 	}
 }
 
+void IconPreview::onExportMergedChanged(bool checked) {
+	// When "Export merged" is checked, save state, auto-check and disable "Export as PNG"
+	if (checked) {
+		m_exportAsPngSaved = m_exportAsPngCheckbox->isChecked();
+		m_exportAsPngCheckbox->setChecked(true);
+		m_exportAsPngCheckbox->setEnabled(false);
+		m_mergedFilenameEdit->setEnabled(true);
+	} else {
+		m_exportAsPngCheckbox->setEnabled(true);
+		m_exportAsPngCheckbox->setChecked(m_exportAsPngSaved);
+		m_mergedFilenameEdit->setEnabled(false);
+	}
+}
+
+void IconPreview::onDoExport() {
+	if (m_exportList.isEmpty()) {
+		QMessageBox::information(this, tr("Export"), tr("No icons in export list."));
+		return;
+	}
+
+	bool exportAsPng = m_exportAsPngCheckbox->isChecked();
+	bool exportMerged = m_exportMergedCheckbox->isChecked();
+
+	if (exportMerged) {
+		// Export merged: ask for save file location
+		QString filename = m_mergedFilenameEdit->text().trimmed();
+		if (filename.isEmpty())
+			filename = "icons_all.png";
+		if (!filename.endsWith(".png", Qt::CaseInsensitive))
+			filename += ".png";
+
+		QString defaultPath = m_lastExportPath.isEmpty() ? QDir::homePath() : m_lastExportPath;
+		QString filePath = QFileDialog::getSaveFileName(this, tr("Save Merged Icons"),
+			defaultPath + "/" + filename, tr("PNG Images (*.png)"));
+		if (filePath.isEmpty())
+			return;
+		m_lastExportPath = QFileInfo(filePath).absolutePath();
+
+		// Calculate merged image dimensions (icons in a row)
+		int iconCount = m_exportList.size();
+		int iconSize = 64;  // Use a fixed size for merged export
+		int cols = qMin(iconCount, 16);  // Max 16 icons per row
+		int rows = (iconCount + cols - 1) / cols;
+
+		QImage mergedImage(cols * iconSize, rows * iconSize, QImage::Format_ARGB32);
+		mergedImage.fill(Qt::transparent);
+
+		QPainter painter(&mergedImage);
+		for (int i = 0; i < iconCount; ++i) {
+			int x = (i % cols) * iconSize;
+			int y = (i / cols) * iconSize;
+			QPixmap scaledPixmap = m_exportList[i].pixmap.scaled(iconSize, iconSize,
+				Qt::KeepAspectRatio, Qt::SmoothTransformation);
+			int offsetX = (iconSize - scaledPixmap.width()) / 2;
+			int offsetY = (iconSize - scaledPixmap.height()) / 2;
+			painter.drawPixmap(x + offsetX, y + offsetY, scaledPixmap);
+		}
+		painter.end();
+
+		if (mergedImage.save(filePath)) {
+			QMessageBox::information(this, tr("Export"),
+				tr("Merged %1 icons to:\n%2").arg(iconCount).arg(filePath));
+		} else {
+			QMessageBox::warning(this, tr("Export Error"),
+				tr("Failed to save merged image."));
+		}
+	} else {
+		// Export individual icons: ask for folder
+		QString defaultPath = m_lastExportPath.isEmpty() ? QDir::homePath() : m_lastExportPath;
+		QString folder = QFileDialog::getExistingDirectory(this, tr("Select Export Folder"), defaultPath);
+		if (folder.isEmpty())
+			return;
+		m_lastExportPath = folder;
+
+		int exported = 0;
+		for (const auto &info : m_exportList) {
+			QString filename = info.name;
+			// Sanitize filename
+			filename.replace(QRegularExpression("[/\\\\:*?\"<>|]"), "_");
+
+			if (exportAsPng || info.svg.isEmpty()) {
+				// Export as PNG
+				QString filePath = folder + "/" + filename + ".png";
+				if (info.pixmap.save(filePath))
+					++exported;
+			} else {
+				// Export as SVG
+				QString filePath = folder + "/" + filename + ".svg";
+				QFile file(filePath);
+				if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+					file.write(info.svg.toUtf8());
+					file.close();
+					++exported;
+				}
+			}
+		}
+
+		QMessageBox::information(this, tr("Export"),
+			tr("Exported %1 of %2 icons to:\n%3").arg(exported).arg(m_exportList.size()).arg(folder));
+	}
+}
+
 // ============================================================================
 // IconGrid
 // ============================================================================
@@ -815,6 +1024,7 @@ IconGrid::IconGrid(QWidget *parent)
 	connect(m_toolBar, &IconToolBar::toneColorChanged, this, &IconGrid::setToneColor);
 	connect(m_toolBar, &IconToolBar::backgroundColorChanged, this, &IconGrid::setBackgroundColor);
 	connect(m_toolBar, &IconToolBar::iconSizeChanged, this, &IconGrid::setIconSize);
+	connect(m_toolBar, &IconToolBar::strokeWidthChanged, this, &IconGrid::setStrokeWidth);
 
 	connect(m_listView->selectionModel(), &QItemSelectionModel::currentChanged,
 			this, &IconGrid::onSelectionChanged);
@@ -844,7 +1054,17 @@ IconGrid::IconGrid(QWidget *parent)
 IconGrid::~IconGrid() = default;
 
 void IconGrid::setIconList(IconList *list) {
+	// Block signals to prevent auto-selection during model update
+	m_listView->blockSignals(true);
+	m_listView->selectionModel()->blockSignals(true);
+	m_listView->clearSelection();
+	m_listView->setCurrentIndex(QModelIndex());
 	m_model->setIconList(list);
+	// Clear again after model update in case it triggered selection
+	m_listView->clearSelection();
+	m_listView->setCurrentIndex(QModelIndex());
+	m_listView->selectionModel()->blockSignals(false);
+	m_listView->blockSignals(false);
 	m_preview->clear();
 }
 
@@ -880,6 +1100,15 @@ void IconGrid::setFillColor(const QColor &color) {
 
 void IconGrid::setToneColor(const QColor &color) {
 	m_model->setToneColor(color);
+}
+
+void IconGrid::setStrokeWidth(int width) {
+	m_model->setStrokeWidth(width);
+}
+
+void IconGrid::setStrokeMode(bool fillBased) {
+	m_model->setStrokeMode(fillBased);
+	m_toolBar->setStrokeMode(fillBased);
 }
 
 void IconGrid::setBackgroundColor(const QColor &color) {

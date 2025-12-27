@@ -72,6 +72,10 @@ public:
 	void setBackgroundColor(const QColor &color);
 	QColor backgroundColor() const;
 
+	void setStrokeWidth(int width);
+	void setStrokeMode(bool fillBased);  // true = absolute values, false = relative scaling
+	int strokeWidth() const;
+
 	// Grayscale mode (for bitmap icons)
 	void setGrayscale(bool enabled);
 	bool isGrayscale() const;
@@ -116,6 +120,8 @@ private:
 	QColor m_fillColor = clNone;
 	QColor m_toneColor = QColor(200, 200, 200);
 	QColor m_backgroundColor = Qt::transparent;
+	int m_strokeWidth = 0;  // Slider position (0-5 for fill-based, 0-4 for stroke-based)
+	bool m_fillBasedStroke = true;  // true = absolute values, false = relative scaling
 	bool m_grayscale = false;
 
 	mutable QCache<int, QPixmap> m_pixmapCache;
@@ -192,25 +198,33 @@ public:
 
 		const auto &map = m_mapping[index];
 
-		// Get body content (paths) from each list
-		QString filledBody = m_filled->getBody(map.filledIdx);
-		QString outlineBody = m_outline->getBody(map.outlineIdx);
+		// Get full SVG source from both layers (colors are already applied via setFillColor/setToneColor)
+		QString filledSvg = m_filled->getSource(map.filledIdx);
+		QString outlineSvg = m_outline->getSource(map.outlineIdx);
 
-		// Build fill color strings
+		// Extract SVG header from outline (preserves viewBox, stroke styling, etc.)
+		int headerEnd = outlineSvg.indexOf('>');
+		if (headerEnd < 0) return QString();
+		QString svgHeader = outlineSvg.left(headerEnd + 1);
+		QString outlineBody = outlineSvg.mid(headerEnd + 1);
+		outlineBody.replace(QLatin1String("</svg>"), QString(), Qt::CaseInsensitive);
+
+		// Extract body from filled (strip header and closing tag)
+		int filledHeaderEnd = filledSvg.indexOf('>');
+		if (filledHeaderEnd < 0) return QString();
+		QString filledBody = filledSvg.mid(filledHeaderEnd + 1);
+		filledBody.replace(QLatin1String("</svg>"), QString(), Qt::CaseInsensitive);
+
+		// Build tone color for wrapping filled layer
 		QString toneColorStr = (m_toneColor.isValid() && m_toneColor.alpha() > 0)
-			? m_toneColor.name() : "#c8c8c8";
-		QString fillColorStr = (m_fillColor.isValid() && m_fillColor.alpha() > 0)
-			? m_fillColor.name() : "#000000";
+			? m_toneColor.name() : QStringLiteral("#c8c8c8");
 
-		// Wrap each layer in a group with the appropriate fill color
-		QString filledLayer = QString("<g fill=\"%1\">%2</g>").arg(toneColorStr, filledBody);
-		QString outlineLayer = QString("<g fill=\"%1\">%2</g>").arg(fillColorStr, outlineBody);
+		// Wrap filled content in a group with explicit fill (overrides parent's fill="none")
+		QString filledLayer = QStringLiteral("<g fill=\"%1\" stroke=\"none\">%2</g>")
+			.arg(toneColorStr, filledBody);
 
-		// Combine with SVG wrapper
-		return QString("<svg viewBox=\"0 0 %1 %1\" xmlns=\"http://www.w3.org/2000/svg\">%2%3</svg>")
-			.arg(m_outline->getBaseSize())
-			.arg(filledLayer)
-			.arg(outlineLayer);
+		// Combine: header + wrapped filled content + outline content + closing tag
+		return svgHeader + filledLayer + outlineBody + QStringLiteral("</svg>");
 	}
 
 	QColor getFillColor() const override { return m_fillColor; }
