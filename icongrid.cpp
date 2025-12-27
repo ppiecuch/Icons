@@ -154,14 +154,20 @@ IconToolBar::IconToolBar(QWidget *parent)
 	m_styleCombo = new QComboBox(this);
 	m_styleCombo->setMinimumWidth(100);
 
-	// Size selector (for SVG - display size)
-	m_sizeLabel = new QLabel(tr("Cell Size:"), this);
-	m_sizeCombo = new QComboBox(this);
-	m_sizeCombo->addItems({"24", "32", "48", "64", "96", "128"});
-	m_sizeCombo->setCurrentIndex(1); // Default to 32
+	// Cell size selector (display size in grid)
+	m_cellSizeLabel = new QLabel(tr("Cell Size:"), this);
+	m_cellSizeCombo = new QComboBox(this);
+	m_cellSizeCombo->addItems({"24", "32", "48", "64", "96", "128"});
+	m_cellSizeCombo->setCurrentIndex(1); // Default to 32
+
+	// SVG icon size selector (for SVG collections with multiple sizes)
+	m_svgSizeLabel = new QLabel(tr("Icon Size:"), this);
+	m_svgSizeCombo = new QComboBox(this);
+	m_svgSizeLabel->setVisible(false);
+	m_svgSizeCombo->setVisible(false);
 
 	// Bitmap size selector (for bitmap - icon size from collection)
-	m_bitmapSizeLabel = new QLabel(tr("Icon Size:"), this);
+	m_bitmapSizeLabel = new QLabel(tr("Bitmap Size:"), this);
 	m_bitmapSizeCombo = new QComboBox(this);
 	m_bitmapSizeLabel->setVisible(false);
 	m_bitmapSizeCombo->setVisible(false);
@@ -201,21 +207,29 @@ IconToolBar::IconToolBar(QWidget *parent)
 	m_strokeWidthSlider->setVisible(false);
 	m_strokeWidthValue->setVisible(false);
 
+	// Left group: Library / Style / Icon Size / Cell Size (compact spacing)
 	layout->addWidget(collectionLabel);
 	layout->addWidget(m_collectionCombo);
-	layout->addSpacing(16);
+	layout->addSpacing(8);
 	layout->addWidget(styleLabel);
 	layout->addWidget(m_styleCombo);
-	layout->addSpacing(16);
-	layout->addWidget(m_sizeLabel);
-	layout->addWidget(m_sizeCombo);
+	layout->addSpacing(8);
+	layout->addWidget(m_svgSizeLabel);
+	layout->addWidget(m_svgSizeCombo);
 	layout->addWidget(m_bitmapSizeLabel);
 	layout->addWidget(m_bitmapSizeCombo);
+	layout->addSpacing(8);
+	layout->addWidget(m_cellSizeLabel);
+	layout->addWidget(m_cellSizeCombo);
+
+	// Spacer between left and right groups
 	layout->addStretch();
+
+	// Right group: Stroke / Colors (compact spacing)
 	layout->addWidget(m_strokeWidthLabel);
 	layout->addWidget(m_strokeWidthSlider);
 	layout->addWidget(m_strokeWidthValue);
-	layout->addSpacing(8);
+	layout->addSpacing(4);
 	layout->addWidget(m_fillColorButton);
 	layout->addWidget(m_toneColorButton);
 	layout->addWidget(m_bgColorButton);
@@ -225,8 +239,10 @@ IconToolBar::IconToolBar(QWidget *parent)
 			this, &IconToolBar::collectionChanged);
 	connect(m_styleCombo, &QComboBox::currentTextChanged,
 			this, &IconToolBar::styleChanged);
-	connect(m_sizeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-			this, &IconToolBar::onIconSizeChanged);
+	connect(m_cellSizeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+			this, &IconToolBar::onCellSizeChanged);
+	connect(m_svgSizeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+			this, &IconToolBar::onSvgSizeChanged);
 	connect(m_bitmapSizeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
 			this, &IconToolBar::onBitmapSizeChanged);
 	connect(m_fillColorButton, &QToolButton::clicked,
@@ -274,7 +290,7 @@ QColor IconToolBar::backgroundColor() const {
 }
 
 int IconToolBar::iconSize() const {
-	return m_sizeCombo->currentText().toInt();
+	return m_cellSizeCombo->currentText().toInt();
 }
 
 void IconToolBar::setFillColor(const QColor &color) {
@@ -372,9 +388,9 @@ void IconToolBar::onBackgroundColorClicked() {
 	}
 }
 
-void IconToolBar::onIconSizeChanged(int index) {
+void IconToolBar::onCellSizeChanged(int index) {
 	Q_UNUSED(index)
-	emit iconSizeChanged(iconSize());
+	emit cellSizeChanged(iconSize());
 }
 
 void IconToolBar::setBitmapSizes(const QList<int> &sizes) {
@@ -389,9 +405,11 @@ void IconToolBar::setBitmapSizes(const QList<int> &sizes) {
 	// Show bitmap size selector for bitmap collections
 	m_bitmapSizeLabel->setVisible(isBitmap);
 	m_bitmapSizeCombo->setVisible(isBitmap);
-	// Hide regular size selector for bitmap collections
-	m_sizeLabel->setVisible(!isBitmap);
-	m_sizeCombo->setVisible(!isBitmap);
+	// Hide SVG size selector for bitmap collections
+	if (isBitmap) {
+		m_svgSizeLabel->setVisible(false);
+		m_svgSizeCombo->setVisible(false);
+	}
 }
 
 int IconToolBar::currentBitmapSize() const {
@@ -401,6 +419,32 @@ int IconToolBar::currentBitmapSize() const {
 void IconToolBar::onBitmapSizeChanged(int index) {
 	Q_UNUSED(index)
 	emit bitmapSizeChanged(currentBitmapSize());
+}
+
+void IconToolBar::setSvgSizes(const QList<int> &sizes) {
+	m_svgSizeCombo->blockSignals(true);
+	m_svgSizeCombo->clear();
+	for (int size : sizes) {
+		m_svgSizeCombo->addItem(QString::number(size), size);
+	}
+	m_svgSizeCombo->blockSignals(false);
+
+	// Always show SVG size selector so user knows icon size (even for single size)
+	bool showSvgSize = !sizes.isEmpty();
+	m_svgSizeLabel->setVisible(showSvgSize);
+	m_svgSizeCombo->setVisible(showSvgSize);
+	// Hide bitmap size selector for SVG collections
+	m_bitmapSizeLabel->setVisible(false);
+	m_bitmapSizeCombo->setVisible(false);
+}
+
+int IconToolBar::currentSvgSize() const {
+	return m_svgSizeCombo->currentData().toInt();
+}
+
+void IconToolBar::onSvgSizeChanged(int index) {
+	Q_UNUSED(index)
+	emit svgSizeChanged(currentSvgSize());
 }
 
 void IconToolBar::setBitmapMode(bool isBitmap) {
@@ -1023,7 +1067,7 @@ IconGrid::IconGrid(QWidget *parent)
 	connect(m_toolBar, &IconToolBar::fillColorChanged, this, &IconGrid::setFillColor);
 	connect(m_toolBar, &IconToolBar::toneColorChanged, this, &IconGrid::setToneColor);
 	connect(m_toolBar, &IconToolBar::backgroundColorChanged, this, &IconGrid::setBackgroundColor);
-	connect(m_toolBar, &IconToolBar::iconSizeChanged, this, &IconGrid::setIconSize);
+	connect(m_toolBar, &IconToolBar::cellSizeChanged, this, &IconGrid::setIconSize);
 	connect(m_toolBar, &IconToolBar::strokeWidthChanged, this, &IconGrid::setStrokeWidth);
 
 	connect(m_listView->selectionModel(), &QItemSelectionModel::currentChanged,

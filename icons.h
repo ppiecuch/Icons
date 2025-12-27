@@ -29,6 +29,7 @@ private slots:
 	void onCollectionChanged(const QString &name);
 	void onStyleChanged(const QString &styleName);
 	void onBitmapSizeChanged(int size);
+	void onSvgSizeChanged(int size);
 	void onIconSelected(int index, const QString &name, const QStringList &tags, const QString &category);
 	void onIconDoubleClicked(int index, const QString &name);
 
@@ -62,6 +63,7 @@ private:
 	IconStyle m_currentStyle = IconStyle::Outline;
 	bool m_isBitmapCollection = false;
 	int m_currentBitmapSize = 32;
+	int m_currentSvgSize = 24;
 
 	int m_selectedIndex = -1;
 	QString m_selectedName;

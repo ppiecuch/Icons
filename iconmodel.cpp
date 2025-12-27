@@ -535,7 +535,7 @@ const IconCollection *IconCollectionRegistry::findCollection(const QString &id) 
 	return nullptr;
 }
 
-SVGIconList *IconCollectionRegistry::createIconList(const QString &collectionId, IconStyle style) const {
+SVGIconList *IconCollectionRegistry::createIconList(const QString &collectionId, IconStyle style, int size) const {
 	const IconCollection *coll = findCollection(collectionId);
 	if (!coll)
 		return nullptr;
@@ -545,7 +545,7 @@ SVGIconList *IconCollectionRegistry::createIconList(const QString &collectionId,
 		if (coll->hasStyle(IconStyle::Filled) && coll->hasStyle(IconStyle::Outline)) {
 			auto filledFactory = coll->styles.at(IconStyle::Filled);
 			auto outlineFactory = coll->styles.at(IconStyle::Outline);
-			return new TwoToneIconList(filledFactory(), outlineFactory());
+			return new TwoToneIconList(filledFactory(size), outlineFactory(size));
 		}
 		// Fallback to Outline if TwoTone not possible
 		style = IconStyle::Outline;
@@ -553,13 +553,13 @@ SVGIconList *IconCollectionRegistry::createIconList(const QString &collectionId,
 
 	auto it = coll->styles.find(style);
 	if (it != coll->styles.end())
-		return it->second();
+		return it->second(size);
 
 	// Try fallback styles
 	if (coll->hasStyle(IconStyle::Outline))
-		return coll->styles.at(IconStyle::Outline)();
+		return coll->styles.at(IconStyle::Outline)(size);
 	if (coll->hasStyle(IconStyle::Filled))
-		return coll->styles.at(IconStyle::Filled)();
+		return coll->styles.at(IconStyle::Filled)(size);
 
 	return nullptr;
 }

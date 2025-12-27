@@ -23,22 +23,52 @@
 #include "library/lib_tabler_outline_24.h"
 
 // Generated icon list headers - Fluent UI (multiple sizes)
+#include "library/lib_fluent_filled_10.h"
+#include "library/lib_fluent_filled_12.h"
 #include "library/lib_fluent_filled_16.h"
 #include "library/lib_fluent_filled_20.h"
 #include "library/lib_fluent_filled_24.h"
+#include "library/lib_fluent_filled_28.h"
 #include "library/lib_fluent_filled_32.h"
+#include "library/lib_fluent_filled_48.h"
+#include "library/lib_fluent_regular_10.h"
+#include "library/lib_fluent_regular_12.h"
 #include "library/lib_fluent_regular_16.h"
 #include "library/lib_fluent_regular_20.h"
 #include "library/lib_fluent_regular_24.h"
+#include "library/lib_fluent_regular_28.h"
 #include "library/lib_fluent_regular_32.h"
+#include "library/lib_fluent_regular_48.h"
 
-// Generated icon list headers - Breeze
+// Generated icon list headers - Breeze (all sizes per category)
+#include "library/lib_breeze_actions_12.h"
+#include "library/lib_breeze_actions_16.h"
 #include "library/lib_breeze_actions_22.h"
+#include "library/lib_breeze_actions_32.h"
+#include "library/lib_breeze_actions_48.h"
+#include "library/lib_breeze_actions_64.h"
+#include "library/lib_breeze_apps_16.h"
+#include "library/lib_breeze_apps_22.h"
+#include "library/lib_breeze_apps_32.h"
 #include "library/lib_breeze_apps_48.h"
+#include "library/lib_breeze_apps_64.h"
+#include "library/lib_breeze_devices_16.h"
 #include "library/lib_breeze_devices_22.h"
+#include "library/lib_breeze_devices_32.h"
+#include "library/lib_breeze_devices_64.h"
+#include "library/lib_breeze_mimetypes_16.h"
 #include "library/lib_breeze_mimetypes_22.h"
+#include "library/lib_breeze_mimetypes_32.h"
+#include "library/lib_breeze_mimetypes_64.h"
+#include "library/lib_breeze_places_16.h"
 #include "library/lib_breeze_places_22.h"
+#include "library/lib_breeze_places_32.h"
+#include "library/lib_breeze_places_48.h"
+#include "library/lib_breeze_places_64.h"
+#include "library/lib_breeze_status_16.h"
 #include "library/lib_breeze_status_22.h"
+#include "library/lib_breeze_status_32.h"
+#include "library/lib_breeze_status_64.h"
 
 // Generated icon list headers - Oxygen (Bitmap)
 #include "library/bitmap/lib_oxygen_128.h"
@@ -102,43 +132,110 @@ void MainWindow::setupConnections() {
 void MainWindow::registerBuiltinCollections() {
 	auto &registry = IconCollectionRegistry::instance();
 
-	// Bootstrap Icons 16 - has Outline + Filled + TwoTone
-	registry.registerCollection({ "bootstrap-16", "Bootstrap 16", 16,
-			{ { IconStyle::Outline, []() { return new BootstrapRegular16IconList(); } },
-					{ IconStyle::Filled, []() { return new BootstrapFill16IconList(); } } } });
+	// Bootstrap Icons - single size 16
+	registry.registerCollection({ "bootstrap", "Bootstrap", { 16 },
+			{ { IconStyle::Outline, [](int) { return new BootstrapRegular16IconList(); } },
+					{ IconStyle::Filled, [](int) { return new BootstrapFill16IconList(); } } } });
 
-	// Tabler Icons 24 - has Outline + Filled + TwoTone
-	registry.registerCollection({ "tabler-24", "Tabler 24", 24,
-			{ { IconStyle::Outline, []() { return new TablerOutline24IconList(); } },
-					{ IconStyle::Filled, []() { return new TablerFilled24IconList(); } } } });
+	// Tabler Icons - single size 24
+	registry.registerCollection({ "tabler", "Tabler", { 24 },
+			{ { IconStyle::Outline, [](int) { return new TablerOutline24IconList(); } },
+					{ IconStyle::Filled, [](int) { return new TablerFilled24IconList(); } } } });
 
-	// Fluent UI Icons - multiple sizes, each with Regular (Outline) + Filled
-	registry.registerCollection({ "fluent-16", "Fluent UI 16", 16,
-			{ { IconStyle::Outline, []() { return new FluentRegular16IconList(); } },
-					{ IconStyle::Filled, []() { return new FluentFilled16IconList(); } } } });
-	registry.registerCollection({ "fluent-20", "Fluent UI 20", 20,
-			{ { IconStyle::Outline, []() { return new FluentRegular20IconList(); } },
-					{ IconStyle::Filled, []() { return new FluentFilled20IconList(); } } } });
-	registry.registerCollection({ "fluent-24", "Fluent UI 24", 24,
-			{ { IconStyle::Outline, []() { return new FluentRegular24IconList(); } },
-					{ IconStyle::Filled, []() { return new FluentFilled24IconList(); } } } });
-	registry.registerCollection({ "fluent-32", "Fluent UI 32", 32,
-			{ { IconStyle::Outline, []() { return new FluentRegular32IconList(); } },
-					{ IconStyle::Filled, []() { return new FluentFilled32IconList(); } } } });
+	// Fluent UI Icons - multiple sizes with Regular (Outline) + Filled
+	registry.registerCollection({ "fluent", "Fluent UI", { 10, 12, 16, 20, 24, 28, 32, 48 },
+			{ { IconStyle::Outline, [](int size) -> SVGIconList* {
+					switch (size) {
+						case 10: return new FluentRegular10IconList();
+						case 12: return new FluentRegular12IconList();
+						case 16: return new FluentRegular16IconList();
+						case 20: return new FluentRegular20IconList();
+						case 24: return new FluentRegular24IconList();
+						case 28: return new FluentRegular28IconList();
+						case 32: return new FluentRegular32IconList();
+						case 48: return new FluentRegular48IconList();
+						default: return new FluentRegular24IconList();
+					}
+				} },
+				{ IconStyle::Filled, [](int size) -> SVGIconList* {
+					switch (size) {
+						case 10: return new FluentFilled10IconList();
+						case 12: return new FluentFilled12IconList();
+						case 16: return new FluentFilled16IconList();
+						case 20: return new FluentFilled20IconList();
+						case 24: return new FluentFilled24IconList();
+						case 28: return new FluentFilled28IconList();
+						case 32: return new FluentFilled32IconList();
+						case 48: return new FluentFilled48IconList();
+						default: return new FluentFilled24IconList();
+					}
+				} } } });
 
-	// Breeze Icons (KDE) - organized by category, single style per category
-	registry.registerCollection({ "breeze-actions", "Breeze Actions", 22,
-			{ { IconStyle::Outline, []() { return new BreezeActions22IconList(); } } } });
-	registry.registerCollection({ "breeze-apps", "Breeze Apps", 48,
-			{ { IconStyle::Outline, []() { return new BreezeApps48IconList(); } } } });
-	registry.registerCollection({ "breeze-places", "Breeze Places", 22,
-			{ { IconStyle::Outline, []() { return new BreezePlaces22IconList(); } } } });
-	registry.registerCollection({ "breeze-status", "Breeze Status", 22,
-			{ { IconStyle::Outline, []() { return new BreezeStatus22IconList(); } } } });
-	registry.registerCollection({ "breeze-devices", "Breeze Devices", 22,
-			{ { IconStyle::Outline, []() { return new BreezeDevices22IconList(); } } } });
-	registry.registerCollection({ "breeze-mimetypes", "Breeze Mimetypes", 22,
-			{ { IconStyle::Outline, []() { return new BreezeMimetypes22IconList(); } } } });
+	// Breeze Icons (KDE) - organized by category with multiple sizes
+	registry.registerCollection({ "breeze-actions", "Breeze Actions", { 12, 16, 22, 32, 48, 64 },
+			{ { IconStyle::Outline, [](int size) -> SVGIconList* {
+					switch (size) {
+						case 12: return new BreezeActions12IconList();
+						case 16: return new BreezeActions16IconList();
+						case 22: return new BreezeActions22IconList();
+						case 32: return new BreezeActions32IconList();
+						case 48: return new BreezeActions48IconList();
+						case 64: return new BreezeActions64IconList();
+						default: return new BreezeActions22IconList();
+					}
+				} } } });
+	registry.registerCollection({ "breeze-apps", "Breeze Apps", { 16, 22, 32, 48, 64 },
+			{ { IconStyle::Outline, [](int size) -> SVGIconList* {
+					switch (size) {
+						case 16: return new BreezeApps16IconList();
+						case 22: return new BreezeApps22IconList();
+						case 32: return new BreezeApps32IconList();
+						case 48: return new BreezeApps48IconList();
+						case 64: return new BreezeApps64IconList();
+						default: return new BreezeApps22IconList();
+					}
+				} } } });
+	registry.registerCollection({ "breeze-places", "Breeze Places", { 16, 22, 32, 48, 64 },
+			{ { IconStyle::Outline, [](int size) -> SVGIconList* {
+					switch (size) {
+						case 16: return new BreezePlaces16IconList();
+						case 22: return new BreezePlaces22IconList();
+						case 32: return new BreezePlaces32IconList();
+						case 48: return new BreezePlaces48IconList();
+						case 64: return new BreezePlaces64IconList();
+						default: return new BreezePlaces22IconList();
+					}
+				} } } });
+	registry.registerCollection({ "breeze-status", "Breeze Status", { 16, 22, 32, 64 },
+			{ { IconStyle::Outline, [](int size) -> SVGIconList* {
+					switch (size) {
+						case 16: return new BreezeStatus16IconList();
+						case 22: return new BreezeStatus22IconList();
+						case 32: return new BreezeStatus32IconList();
+						case 64: return new BreezeStatus64IconList();
+						default: return new BreezeStatus22IconList();
+					}
+				} } } });
+	registry.registerCollection({ "breeze-devices", "Breeze Devices", { 16, 22, 32, 64 },
+			{ { IconStyle::Outline, [](int size) -> SVGIconList* {
+					switch (size) {
+						case 16: return new BreezeDevices16IconList();
+						case 22: return new BreezeDevices22IconList();
+						case 32: return new BreezeDevices32IconList();
+						case 64: return new BreezeDevices64IconList();
+						default: return new BreezeDevices22IconList();
+					}
+				} } } });
+	registry.registerCollection({ "breeze-mimetypes", "Breeze Mimetypes", { 16, 22, 32, 64 },
+			{ { IconStyle::Outline, [](int size) -> SVGIconList* {
+					switch (size) {
+						case 16: return new BreezeMimetypes16IconList();
+						case 22: return new BreezeMimetypes22IconList();
+						case 32: return new BreezeMimetypes32IconList();
+						case 64: return new BreezeMimetypes64IconList();
+						default: return new BreezeMimetypes22IconList();
+					}
+				} } } });
 
 	// Oxygen Icons (Bitmap) - multiple sizes available
 	registry.registerBitmapCollection({ "oxygen", "Oxygen Icons",
@@ -210,6 +307,7 @@ void MainWindow::loadCollections() {
 		connect(toolbar, &IconToolBar::collectionChanged, this, &MainWindow::onCollectionChanged);
 		connect(toolbar, &IconToolBar::styleChanged, this, &MainWindow::onStyleChanged);
 		connect(toolbar, &IconToolBar::bitmapSizeChanged, this, &MainWindow::onBitmapSizeChanged);
+		connect(toolbar, &IconToolBar::svgSizeChanged, this, &MainWindow::onSvgSizeChanged);
 
 		// Restore colors from preferences
 		QSettings settings;
@@ -251,7 +349,7 @@ void MainWindow::loadCollections() {
 	// Count total icons
 	int totalIcons = 0;
 	for (const auto &coll : collections) {
-		auto *tempList = registry.createIconList(coll.id, IconStyle::Outline);
+		auto *tempList = registry.createIconList(coll.id, IconStyle::Outline, coll.defaultSize());
 		if (tempList) {
 			totalIcons += tempList->getCount();
 			delete tempList;
@@ -280,7 +378,7 @@ void MainWindow::loadCurrentCollection() {
 			m_ui->iconGrid->setIconList(list);
 		}
 	} else {
-		auto *list = registry.createIconList(m_currentCollectionId, m_currentStyle);
+		auto *list = registry.createIconList(m_currentCollectionId, m_currentStyle, m_currentSvgSize);
 		if (list) {
 			m_iconLists.push_back(std::unique_ptr<SVGIconList>(list));
 			m_currentList = list;
@@ -325,7 +423,14 @@ void MainWindow::updateAvailableStyles() {
 				styles.append("TwoTone");
 		}
 		toolbar->setStyles(styles);
-		toolbar->setBitmapSizes({}); // Hide size selector for SVG
+
+		// Set available SVG sizes for this collection
+		toolbar->setSvgSizes(coll->availableSizes);
+
+		// Set current size to collection's default if not already set
+		if (m_currentSvgSize <= 0 || !coll->availableSizes.contains(m_currentSvgSize)) {
+			m_currentSvgSize = coll->defaultSize();
+		}
 	}
 }
 
@@ -400,6 +505,13 @@ void MainWindow::onStyleChanged(const QString &styleName) {
 void MainWindow::onBitmapSizeChanged(int size) {
 	if (m_isBitmapCollection) {
 		m_currentBitmapSize = size;
+		loadCurrentCollection();
+	}
+}
+
+void MainWindow::onSvgSizeChanged(int size) {
+	if (!m_isBitmapCollection && size > 0) {
+		m_currentSvgSize = size;
 		loadCurrentCollection();
 	}
 }

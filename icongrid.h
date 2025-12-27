@@ -100,6 +100,9 @@ public:
 	void setBitmapSizes(const QList<int> &sizes);
 	int currentBitmapSize() const;
 
+	void setSvgSizes(const QList<int> &sizes);
+	int currentSvgSize() const;
+
 	void setBitmapMode(bool isBitmap);
 
 	int strokeWidth() const;
@@ -111,9 +114,10 @@ signals:
 	void fillColorChanged(const QColor &color);
 	void toneColorChanged(const QColor &color);
 	void backgroundColorChanged(const QColor &color);
-	void iconSizeChanged(int size);
+	void cellSizeChanged(int size);
 	void styleChanged(const QString &style);
 	void bitmapSizeChanged(int size);
+	void svgSizeChanged(int size);
 	void strokeWidthChanged(int width);
 
 public slots:
@@ -125,8 +129,9 @@ private slots:
 	void onFillColorClicked();
 	void onToneColorClicked();
 	void onBackgroundColorClicked();
-	void onIconSizeChanged(int index);
+	void onCellSizeChanged(int index);
 	void onBitmapSizeChanged(int index);
+	void onSvgSizeChanged(int index);
 	void onStrokeWidthChanged(int value);
 
 private:
@@ -136,8 +141,10 @@ private:
 
 	QComboBox *m_collectionCombo;
 	QComboBox *m_styleCombo;
-	QComboBox *m_sizeCombo;
-	QLabel *m_sizeLabel;
+	QComboBox *m_cellSizeCombo;
+	QLabel *m_cellSizeLabel;
+	QComboBox *m_svgSizeCombo;
+	QLabel *m_svgSizeLabel;
 	QComboBox *m_bitmapSizeCombo;
 	QLabel *m_bitmapSizeLabel;
 	QToolButton *m_fillColorButton;

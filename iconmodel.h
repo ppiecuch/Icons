@@ -249,12 +249,12 @@ enum class BitmapStyle {
 	Grayscale
 };
 
-// Represents an SVG icon collection with multiple styles
+// Represents an SVG icon collection with multiple sizes and styles
 struct IconCollection {
 	QString id;
 	QString displayName;
-	int baseSize;
-	std::map<IconStyle, std::function<SVGIconList*()>> styles;
+	QList<int> availableSizes;
+	std::map<IconStyle, std::function<SVGIconList*(int size)>> styles;
 
 	bool hasStyle(IconStyle style) const { return styles.count(style) > 0; }
 	QList<IconStyle> availableStyles() const {
@@ -263,6 +263,7 @@ struct IconCollection {
 			result.append(pair.first);
 		return result;
 	}
+	int defaultSize() const { return availableSizes.isEmpty() ? 24 : availableSizes.first(); }
 };
 
 // Represents a bitmap icon collection with multiple sizes
@@ -286,7 +287,7 @@ public:
 	void registerCollection(const IconCollection &collection);
 	QList<IconCollection> collections() const;
 	const IconCollection *findCollection(const QString &id) const;
-	SVGIconList *createIconList(const QString &collectionId, IconStyle style) const;
+	SVGIconList *createIconList(const QString &collectionId, IconStyle style, int size) const;
 
 	// Bitmap collections
 	void registerBitmapCollection(const BitmapCollection &collection);
