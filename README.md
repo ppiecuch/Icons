@@ -75,12 +75,12 @@ Icons/
 ## Changelog
 
 ### Version 1.2
-- Batch export functionality with folder selection
-- Export as PNG option for SVG icons
-- Export merged - combine all selected icons into single PNG image
-- Improved stroke width slider with value display
-- Separate stroke modes: absolute values for fill-based icons, relative scaling for Tabler
-- Copy SVG now outputs actual color values instead of "currentColor"
+- Consolidated icon collections with Icon Size selector (e.g., single "Fluent UI" with sizes 10-48)
+- Cell Size control for display size in grid (separate from icon size)
+- Batch export with folder selection and Export Merged option
+- Improved toolbar layout with grouped controls
+- Stroke width slider with absolute/relative modes
+- Entity editor for SVG icons with customizable values
 
 ### Version 1.1
 - Added stroke width control slider (5 levels: 0.5x to 1.5x) for outline icons
