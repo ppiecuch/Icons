@@ -3,7 +3,7 @@ QT += widgets svg sql
 CONFIG += app_bundle sdk_no_version_check
 
 VERSION = 1.2
-BUILD = 70
+BUILD = 73
 
 DEFINES += APP_VERSION=\\\"$$VERSION\\\" APP_BUILD=$$BUILD
 

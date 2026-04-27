@@ -1,5 +1,7 @@
 # ![Logo](promo/logo.png) Icon Viewer
 
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate?business=6QXS8MBPKBTTN&item_name=Icons+app.&currency_code=USD)
+
 A Qt-based desktop application for browsing, previewing, and exporting icons from multiple open-source icon collections. Supports both SVG vector icons and PNG bitmap icons.
 
 # ![App](promo/app.png)
@@ -109,3 +111,9 @@ Based on [SVGIconViewer](https://github.com/skamradt/SVGIconViewer) by skamradt.
 ## License
 
 Icon libraries are used under their respective licenses (MIT for Bootstrap, Tabler, Fluent UI; LGPL for Breeze).
+
+## Support
+
+If you find this useful, please consider supporting development:
+
+[![Donate](img/donate.png)](https://www.paypal.com/donate?business=6QXS8MBPKBTTN&item_name=Icons+app.&currency_code=USD)
